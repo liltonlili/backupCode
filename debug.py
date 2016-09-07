@@ -1,4 +1,5 @@
-import common
-
-x=common.showinfos("000626")
-print x
+import cv2
+import numpy as np
+img = cv2.imread("roi.jpg")
+cv2.imshow("img", img)
+cv2.waitKey(0)

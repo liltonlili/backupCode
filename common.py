@@ -741,3 +741,23 @@ def get_latest_news(stock):
 
     news = real_content + hist_content
     return news
+
+# 某只股票，某段时间内的涨停情况
+def zt_stats(stcid, start_date, end_date):
+    global mongodb
+    end_date = format_date(end_date, "%Y%m%d")
+    start_date = format_date(start_date, "%Y%m%d")
+    ZTFrame = DataFrame()
+    HDFrame = DataFrame()
+    results = mongodb.stock.ZDT_by_date.find({"date":{"$gte":start_date, "$lte":end_date}})
+    i = 0
+    j = 0
+    for result in results:
+        if "ZT_stocks" in result.keys() and stcid in result['ZT_stocks'].split("_"):
+            ZTFrame.loc[i, "zt_date"] = result['date']
+            i += 1
+
+        elif "HD_stocks" in result.keys() and stcid in result['HD_stocks'].split("_"):
+            HDFrame.loc[j, "hd_date"] = result['date']
+            j += 1
+    return ZTFrame, HDFrame
