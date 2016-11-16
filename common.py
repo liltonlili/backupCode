@@ -14,6 +14,7 @@ from Tkinter import *
 from tkMessageBox import *
 import Tkinter as tk
 import json
+import shutil
 
 mongourl = "localhost"
 global mongodb
@@ -25,10 +26,11 @@ def connectdb():
     # dydb='c'
     mydbs=mysqldb({'host': 'db-bigdata.wmcloud-qa.com', 'user': 'app_bigdata_ro', 'pw': 'Welcome_20141217', 'db': 'bigdata', 'port': 3312})
     mydb = mysqldb({'host': '10.21.232.43', 'user': 'app_gaea_ro', 'pw': 'Welcome20150416', 'db': 'MarketDataL1', 'port': 5029})  ##分笔，分钟级
-    dydb  = mysqldb({'host': 'db-datayesdb.wmcloud-qa.com', 'user': 'app_gaea_ro', 'pw': 'EQw6WquhnCKPp8Li', 'db': 'datayesdbp', 'port': 3313})
+    dydb  = mysqldb({'host': 'db-datayesdb-ro.wmcloud.com', 'user': 'app_gaea_ro', 'pw': 'EQw6WquhnCKPp8Li', 'db': 'datayesdbp', 'port': 3313})
     cardb = mysqldb({'host': 'db-news.wmcloud-stg.com', 'user': 'app_bigdata_ro', 'pw': 'Welcome_20141217', 'db': 'news', 'port': 3310})
-    souhudbs = mysqldb({'host': 'db-datayesdb.wmcloud-qa.com', 'user': 'app_gaea_ro', 'pw': 'EQw6WquhnCKPp8Li', 'db': 'datayesdb', 'port': 3313})
-    souhudbi = mysqldb({'host': 'db-bigdata.wmcloud-qa.com', 'user': 'app_bigdata_ro', 'pw': 'Welcome_20141217', 'db': 'bigdata', 'port': 3312})
+    souhudbs = mysqldb({'host': 'db-datayesdb-ro.wmcloud.com', 'user': 'app_gaea_ro', 'pw': 'EQw6WquhnCKPp8Li', 'db': 'datayesdb', 'port': 3313})
+    # souhudbi = mysqldb({'host': 'db-bigdata.wmcloud-qa.com', 'user': 'app_bigdata_ro', 'pw': 'Welcome_20141217', 'db': 'bigdata', 'port': 3312})
+    souhudbi = mydbs
     # localdb = mysqldb({'host': '127.0.0.1', 'user': 'root', 'pw': '', 'db': 'stock', 'port': 3306})
     localdb = None
     return (mydbs,mydb,dydb,localdb,cardb,souhudbs,souhudbi)
@@ -75,6 +77,9 @@ class mysqldata:
             return 1
         except Exception,e:
             return e
+
+global mysqldb
+mysqldb = mysqldata()
 
 ## [(2010,1),(2010,2)]
 def get_ympair(sty,stm,eny,enm):
@@ -160,7 +165,21 @@ def getDate(startdate,enddate):
     calList=calframe['Time'].values
     return list(calList)
 
-
+# 得到股票某日的情况
+# 返回值为 涨幅，收盘是否涨停，收盘是否跌停，最高是否涨停，最低是否涨停
+def get_day_k_status(stockid, date):
+    try:
+        dframe = get_mysqlData([stockid], [date])
+        change_rate = round(100*(dframe.loc[0, 'CLOSE_PRICE'] - dframe.loc[0, 'PRE_CLOSE_PRICE'])/dframe.loc[0, 'PRE_CLOSE_PRICE'], 2)
+        zt_price = round(1.1 * dframe.loc[0, 'PRE_CLOSE_PRICE'], 2)
+        dt_price = round(0.9 * dframe.loc[0, 'PRE_CLOSE_PRICE'], 2)
+        close_zt_status = (zt_price == dframe.loc[0, 'CLOSE_PRICE'])
+        close_dt_status = (dt_price == dframe.loc[0, 'CLOSE_PRICE'])
+        high_zt_status = (zt_price == dframe.loc[0, 'HIGHEST_PRICE'])
+        low_dt_status = (zt_price == dframe.loc[0, 'LOWEST_PRICE'])
+        return change_rate, close_zt_status, close_dt_status, high_zt_status, low_dt_status
+    except:
+        return None, None, None, None, None
 ## 输入格式不限
 ## 根据股票代码和日期获取交易数据
 ## 如果stock_list长度为0，则选出所有股票
@@ -171,7 +190,8 @@ def getDate(startdate,enddate):
 # 1           600710          *ST常林  2016-04-27             9.36        0.00         10.61         10.52        10.57
 
 def get_mysqlData(stock_list,date_list):
-    mysqldb = mysqldata()
+    # mysqldb = mysqldata()
+    global mysqldb
     stock_list = [str(x).replace('sh',"").replace('sz',"").replace(".","").replace("SH","").replace("SZ","") for x in stock_list]
     stock_list = ['0'*(6-len(str(x)))+str(x) for x in stock_list]
     date_list = [format_date(x,"%Y-%m-%d") for x in date_list]
@@ -194,13 +214,15 @@ def get_mysqlData(stock_list,date_list):
 
 ## 执行mysql，返回dataframe
 def get_mysqlData_sqlquery(sqlquery):
-    mysqldb = mysqldata()
+    # mysqldb = mysqldata()
+    global mysqldb
     dataFrame = mysqldb.dydb_query(sqlquery)
     return dataFrame
 
 ## 执行mysql，返回dataframe
 def get_mydb_sqlquery(sqlquery):
-    mysqldb = mysqldata()
+    # mysqldb = mysqldata()
+    global mysqldb
     dataFrame = mysqldb.mydb_query(sqlquery)
     return dataFrame
 
@@ -222,7 +244,9 @@ def get_value(stoc_list,date):
                 pass
     last_date=get_last_date(date)
     vframe=pd.DataFrame()
-    sqldb=mysqldata()
+    # sqldb=mysqldata()
+    global mysqldb
+    sqldb = mysqldb
     #      TICKER_SYMBOL SEC_SHORT_NAME  TRADE_DATE  PRE_CLOSE_PRICE  OPEN_PRICE    HIGHEST_PRICE   LOWEST_PRICE  CLOSE_PRICE
 # 0           000033          *ST新都  2016-04-27            10.38        0.00           0.00          0.00        10.38
 # 1           600710          *ST常林  2016-04-27             9.36        0.00         10.61         10.52        10.57
@@ -296,8 +320,12 @@ def get_lastN_date(date,n):
     calframe.columns=['Time']
     format_str=format_date(date,"%Y/%m/%d")
     index=calframe[calframe.Time==format_str].index
-    last_index=index-n
-    last_date=str(calframe.loc[last_index,:]['Time'].values[0])
+    last_index= index-n
+    if last_index > calframe.index.values[-1]:
+        last_index = calframe.index.values[-1]
+        last_date=str(calframe.loc[last_index,'Time'])
+    else:
+        last_date=str(calframe.loc[last_index,:]['Time'].values[0])
     last_date=datetime.datetime.strptime(last_date,"%Y/%m/%d").strftime("%Y-%m-%d")
     return last_date
 
@@ -618,7 +646,7 @@ def plotFrame(dataFrame,x='',y=[],titles=[],point=100, marker=False):
     plt.show()
 
 #查找数据库中的股票,name可以是股票代码，也可以是股票名字
-# 返回是[601989,'中国重工']
+# 返回是['中国重工', 601989]
 def QueryStockMap(id='',name=''):
     global mongodb
     if id != '':
@@ -761,3 +789,194 @@ def zt_stats(stcid, start_date, end_date):
             HDFrame.loc[j, "hd_date"] = result['date']
             j += 1
     return ZTFrame, HDFrame
+
+## 添加均线,利用CLOSE_PRICE,得到mean5,mean10,mean20...
+def add_mean(dframe):
+    for ma in [5,10,20,60,120]:
+        dframe['mean%s'%ma]=dframe['CLOSE_PRICE'].rolling(window=ma).mean()
+
+# 得到股票代码在某些天内的日线数据
+# 格式匹配交割单图
+# 1代表个股，0代表指数
+def get_daily_frame(code, start_date, end_date, id_type = 1):
+    if id_type == 1:
+        code = "0"*(6-len(str(int(code))))+str(int(code))
+        sql = "SELECT TICKER_SYMBOL, SEC_SHORT_NAME, TRADE_DATE, PRE_CLOSE_PRICE, OPEN_PRICE, HIGHEST_PRICE, LOWEST_PRICE, CLOSE_PRICE, \
+        DEAL_AMOUNT from vmkt_equd where TRADE_DATE >= '%s' and TRADE_DATE <='%s' and TICKER_SYMBOL = '%s'"%(start_date,end_date,code)
+        sub = get_mysqlData_sqlquery(sql)
+    elif id_type == 0:
+        idxcode = "000001"
+        idxsql = "SELECT TICKER_SYMBOL, SEC_SHORT_NAME, TRADE_DATE, PRE_CLOSE_INDEX, OPEN_INDEX, HIGHEST_INDEX, LOWEST_INDEX, CLOSE_INDEX, \
+        TURNOVER_VOL from vmkt_idxd where TRADE_DATE >= '%s' and TRADE_DATE <='%s' and TICKER_SYMBOL = '%s'"%(start_date,end_date,idxcode)
+        sub = get_mysqlData_sqlquery(idxsql)
+        sub.columns=[["TICKER_SYMBOL", "SEC_SHORT_NAME", "TRADE_DATE", "PRE_CLOSE_PRICE", "OPEN_PRICE", "HIGHEST_PRICE", "LOWEST_PRICE", "CLOSE_PRICE", "DEAL_AMOUNT"]]
+    add_mean(sub)
+    return sub
+
+# 得到股票代码在某天内的分钟级数据
+# 格式匹配交割单图
+# 1代表个股，0代表指数
+def get_minly_frame(stockid, endDate, id_type =1):
+    tableTime = format_date(endDate,"%Y%m")
+    endDate = format_date(endDate,"%Y%m%d")
+    if id_type == 1:
+        stockid = "0"*(6-len(str(int(stockid))))+str(int(stockid))
+        # table = "equity_pricefenbi%s"%tableTime
+        table = "MarketDataTDB.equity_pricemin%s"%tableTime
+        dtsql = "SELECT * from %s where ticker = %s and datadate = %s"%(table,stockid,endDate)
+        dtv = get_mydb_sqlquery(dtsql)
+        if len(dtv) == 0:
+            table = "MarketDataL1.equity_pricemin%s"%tableTime
+            dtsql = "SELECT * from %s where ticker = %s and datadate = %s"%(table,stockid,endDate)
+            dtv = get_mydb_sqlquery(dtsql)
+    else:
+        table = "MarketDataTDB.equity_pricemin%s"%tableTime
+        zssql = 'SELECT * from %s where datadate = %s and ticker = 1 and shortnm = "上证指数"'%(table,endDate)
+        dtv = get_mydb_sqlquery(zssql)
+        if len(dtv) == 0:
+            table = "MarketDataTDB.equity_pricemin%s"%tableTime
+            zssql = 'SELECT * from %s where datadate = %s and ticker = 1 and shortnm = "上证综指"'%(table,endDate)
+            dtv = get_mydb_sqlquery(zssql)
+    return dtv
+
+# generate a html file
+'''
+series =
+[
+    {
+        name: '3քָ˽',
+        type: 'line',
+        data: [1, 3, 9, 27, 81, 247, 741, 2223, 6669]
+    },
+    {
+        name: '2քָ˽',
+        type: 'line',
+        data: [1, 2, 4, 8, 16, 32, 64, 128, 256]
+    },
+    {
+        name: '1/2քָ˽',
+        type: 'line',
+        data: [1/2, 1/4, 1/8, 1/16, 1/32, 1/64, 1/128, 1/256, 1/512]
+    }
+]
+'''
+# LEGEND_REPLACE = ['legendA','legendB']
+# dframe 列必须为： index  bartime, stockid1, stockid2, ...
+# 根据dframe的每一个stockid列，生成一个曲线，可以点击取消
+def curve_html(dframe):
+    x = '''
+    <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+    <html>
+        <head>
+           <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+            <title>amCharts Example</title>
+            <!--link rel="stylesheet" href="style.css" type="text/css"-->
+            <script src="./conf/jquery-3.1.0.min.js" type="text/javascript"></script>
+            <script src="./conf/echarts.min.js" type="text/javascript"></script>
+            <script type="text/javascript">
+            var chart;
+
+            window.onload = function() {
+                show_pic();
+            }
+
+            function show_pic() {
+                var series=[];
+                var option = {
+                    title: {
+                        text: 'compare',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{a} <br/>{b} : {c}'
+                    },
+                    legend: {
+                        data: LEGEND_REPLACE,
+                        left:'left'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        name: 'x',
+                        splitLine: {show: false},
+                        data: XAXIS_REPLACE
+                    },
+                    yAxis: {
+                      //  type: 'value',
+                       // min: -10,
+                        //max:10
+                    },
+                    series: SERIES_REPLACE
+                };
+                var legend={left:"left",data:[]};
+                var xAxis={
+                    type: 'category',
+                    name: 'x',
+                    splitLine: {show: false},
+                    data: []
+                }
+
+                //alert(option)
+                //option["title"]={text:"hello", left:'center'};
+                //option["xAxis"]=xAxis;
+                //option["legend"]=legend;
+                //option["series"]=series;
+                console.log(option)
+                var myChart = echarts.init(document.getElementById('chartdiv'));
+                myChart.setOption(option);
+                //writeObj(option['legend'])
+            }
+
+
+
+            </script>
+        </head>
+        <body style="background-color:#EEEEEE">
+            <div id="chartdiv" style="width:800; height:800px; background-color:#FFFFFF"></div>
+        </body>
+    </html>
+'''
+    list_series = []
+    list_legend = []
+    for index in range(1, len(dframe.columns)):
+        name = dframe.columns[index]
+        # print name
+        data_list = str(list(dframe.loc[:, name]))
+        time_list = str(list(dframe.loc[:, 'barTime']))
+        time_list = time_list.replace("u", "")
+        # data = str([[time_list[i], data_list[i]] for i in range(len(data_list))])
+        c_name = QueryStockMap(id = name)[0]
+        tmp_dict = {
+            "name":name,
+            "type":'line',
+            "data":data_list
+        }
+        list_legend.append(c_name)
+        list_series.append(tmp_dict)
+    list_series = str(list_series)
+    list_series = list_series.replace('"[','').replace("'data': '[","data:[").replace("]'","]").replace("'type':","type:").replace("'name':","name:")
+    list_legend = str(list_legend)
+    text = x.replace("SERIES_REPLACE", list_series).replace("LEGEND_REPLACE", list_legend).replace("XAXIS_REPLACE", time_list)
+    return text
+
+# 将一个np.array的closePrice变成%
+def normalize_frame(np_arr, last_price):
+    open_arr = np.array([last_price] * len(np_arr))
+    tmp_array = 100*(np_arr - open_arr)/open_arr
+    tmp_array = tmp_array.round(2)
+    return tmp_array
+
+
+def get_html_curve(dframe, html_name, save_dir = "./"):
+    text = curve_html(dframe)
+    if not os.path.exists(os.path.join(save_dir, "conf/")):
+        os.mkdir(os.path.join(os.path.join(save_dir, "conf/")))
+    print os.curdir
+    if not os.path.exists(os.path.join(save_dir, "conf/jquery-3.1.0.min.js")):
+        shutil.copy(os.path.join(os.curdir, "./conf/jquery-3.1.0.min.js"), os.path.join(save_dir, "conf/jquery-3.1.0.min.js"))
+    print os.curdir
+    if not os.path.exists(os.path.join(save_dir, "conf/echarts.min.js")):
+        shutil.copy(os.path.join(os.curdir, "./conf/echarts.min.js"), os.path.join(save_dir, "conf/echarts.min.js"))
+    fHandler = open(os.path.join(save_dir,"%s.html"%html_name), 'wb')
+    fHandler.write(text)
+    fHandler.close()

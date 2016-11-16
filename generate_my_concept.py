@@ -6,12 +6,12 @@ import pymongo
 # 将add.csv的股票写到mongo中，作为我挑选出来的股票列表
 
 dir = u"D:/Money/lilton_code/Market_Mode/rocketup/全概念"
-oriCsv = os.path.join(dir, "LED.csv")
+oriCsv = os.path.join(dir, "add.csv")
 oriFrame = pd.read_csv(oriCsv, encoding='gbk')
 mongo_url = "localhost"
 mongodb = pymongo.MongoClient(mongo_url)
 
-concept_name = u'LED'
+concept_name = u'360'
 for index in oriFrame.index.values:
     try:
         stockid = oriFrame.loc[index, "stockid"]

@@ -6,6 +6,7 @@ import monitor_concept
 from flask import Flask, request, app, jsonify
 from flask_restful import Resource, Api
 import multiprocessing
+import os
 
 app = Flask(__name__)
 
@@ -36,7 +37,7 @@ if __name__=='__main__':
     logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s [%(levelname)s] %(threadName)s Line:%(lineno)d - %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S.000',
-                    filename='./logs/Center_Chain.log',
+                    filename=os.path.join('D:/Money/lilton_code/Market_Mode/rocketup/logs,Center_Chain.log'),
                     filemode='w+')
 
 

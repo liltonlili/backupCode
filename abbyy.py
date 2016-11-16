@@ -20,6 +20,7 @@ class FineReader():
         time.sleep(2)
         self.cancelDig()
         self.findReader.Minimize()
+        self.click = 0
 
     # def clear(self,num,mutex):
     #     mutex.acquire()
@@ -81,7 +82,7 @@ class FineReader():
                     openDlg[self.op].Click()
                 except Exception, err:
                     logging.getLogger().info("Error when open, err:%s" %err)
-                    self.min()
+                    # self.min()
                 finally:
                     openDlg = self.app.window_(title=u'打开图像', class_name=u"#32770")
                     if not openDlg.Exists():
@@ -102,7 +103,7 @@ class FineReader():
                     time.sleep(2)
                     tcount -= 1
             time.sleep(1)
-            self.min()
+            # self.min()
             return True
         return False
 
@@ -117,31 +118,52 @@ class FineReader():
             while saveDlg.Exists():
                 saveDlg.Wait(self.property).TypeKeys(outPath)
                 try:
+                    if self.click == 0:
+                        saveDlg[u'保存后打开文档'].Click()
+                        self.click = 1
                     saveDlg[u'保存'].Click()
                     time.sleep(1)
                     saveDlg = self.app.window_(title_re=u'将文档另存为', class_name = "#32770")
                     if not saveDlg.Exists():
-                        self.min()
+                        # self.min()
                         self.delete()
                         return True
                 except Exception, err:
                     pass
                     self.delete()
-                    self.min()
+                    # self.min()
                     return True
             self.delete()
+            time.sleep(1)
             self.min()
+            self.max()
+            # self.min()
             return False
 
     # 删除当前页面
     def delete(self):
         try:
             self.max()
-            self.findReader.Wait(self.property).TypeKeys('^D')
-            infoDlg = self.app.window_(title_re = u"ABBYY FineReader 12", class_name = "#32770")
-            while infoDlg.Exists():
-                infoDlg[u'是'].Click()
+            status = 3  #只进入循环，不点击
+            while status > 1:
+                if status == 2:
+                    while infoDlg.Exists():
+                        infoDlg[u'是'].Click()
+                        infoDlg = self.app.window_(title_re = u"ABBYY FineReader 12", class_name = "#32770")
+                self.findReader.Wait(self.property).TypeKeys('^D')
                 infoDlg = self.app.window_(title_re = u"ABBYY FineReader 12", class_name = "#32770")
+                status = infoDlg.Exists()
+                if not status:
+                    break
+                while infoDlg.Exists():
+                    infoDlg[u'是'].Click()
+                    infoDlg = self.app.window_(title_re = u"ABBYY FineReader 12", class_name = "#32770")
+                self.findReader.Wait(self.property).TypeKeys('^D')
+                infoDlg = self.app.window_(title_re = u"ABBYY FineReader 12", class_name = "#32770")
+                if infoDlg.Exists():
+                    status = 2
+                else:
+                    break
         except Exception,err:
             print "Error when delete page, %s" %err
 

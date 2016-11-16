@@ -7,8 +7,8 @@ import common
 
 mongo_url = "localhost"
 mongodb = pymongo.MongoClient(mongo_url)
-jrjConcepts = mongodb.stock.jrj_concept.find({"concept":u"LED"})
-ycjConcepts = mongodb.stock.ycj_concept.find({"concept":u"LED"})
+jrjConcepts = mongodb.stock.jrj_concept.find({"concept":u"SZGZ"})
+ycjConcepts = mongodb.stock.ycj_concept.find({"concept":u"SZGZ"})
 
 jrj_dict = {}
 for jrjconcept in jrjConcepts:
@@ -56,7 +56,7 @@ for item in total_dict:
     tframe.loc[count, 'reason'] = total_dict[item]['reason']
     count += 1
 
-tframe.to_csv(u"./全概念/LED.csv",encoding='gbk')
+tframe.to_csv(u"./全概念/SZGZ.csv",encoding='gbk')
 
 
 

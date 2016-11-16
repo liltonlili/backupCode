@@ -38,6 +38,7 @@ class RealPrice():
                     # print self.priceFrame.head(5)
                     self.update_redis()
                     if (thour > 15) or (thour == 15 and tmin > 5):
+                        print "today's monitor finished!"
                         break
                     status = False
                     time.sleep(20)
@@ -49,14 +50,21 @@ class RealPrice():
     # 获取股票代码列表
     def initial_stock_list(self):
         try:
-            # while(True):
-            #     zs=ts.get_today_all()
-            #     if len(zs) > 1000:
-            #         break
-            #     time.sleep(5)
             dir = 'D:\Money\lilton_code'
-            zs=pd.read_csv(os.path.join(dir,'stock_list.csv'))
-            stock_list=list(set(zs.code.values))
+            # if 1:
+            try:
+                while(True):
+                    zs = ts.get_stock_basics()
+                    if len(zs) > 1000:
+                        break
+                    time.sleep(5)
+                zs.to_csv(os.path.join(dir,'stock_list.csv'))
+            except:
+                zs = pd.read_csv(os.path.join(dir, "stock_list.csv"))
+            print "initialize stocklist finished!"
+
+            stock_list=list(set(zs.index.values))
+            # stock_list=list(set(zs.code.values))
             stock_lists=[]
 
             for code in stock_list:
@@ -76,6 +84,7 @@ class RealPrice():
         dir = 'D:\Money\Realtime'
         slist=','.join(stock_list)
         url = "http://hq.sinajs.cn/list=%s"%slist
+        # print url
         try:
             r=requests.get(url)
         except:
@@ -98,14 +107,17 @@ class RealPrice():
             close = item_array[3]
             preclose = item_array[2]
             high = item_array[4]
-
-            if close == '0.00':
-                continue
+            low = item_array[5]
+            # if high == '0.000':
+            #     high = close
+            #     low =
             Inframe.loc[i,'time']=timestamp
             Inframe.loc[i,'stcid']=stockid
             Inframe.loc[i,'close']=close
             Inframe.loc[i,'preclose']=preclose
             Inframe.loc[i,'high']=high
+            Inframe.loc[i,'low']=low
+
             i+=1
         Inframe['rate']=100*(Inframe['close'].astype(np.float64)-Inframe['preclose'].astype(np.float64))/Inframe['preclose'].astype(np.float64)
         Inframe['rate']=Inframe['rate'].round(decimals=2)
@@ -113,20 +125,25 @@ class RealPrice():
         # Inframe['hate']=Inframe['hate'].round(decimals=2)`
         return Inframe
 
-
+    # priceFrame
+    # time   stcid  close  preclose   high   rate
     def update_redis(self):
         global redisc
-        tmpframe = self.priceFrame[['close','stcid', "rate"]]
+        tmpframe = self.priceFrame[['close', 'preclose', 'high', 'low', 'stcid', "rate"]]
         tmpframe.set_index("stcid", inplace=True)
         # price_dict = dict(tmpframe['close'])
         for key in tmpframe.index.values:
-            value = tmpframe.loc[key,'close']
+            close = tmpframe.loc[key,'close']
+            preclose = tmpframe.loc[key,'preclose']
+            high = tmpframe.loc[key,'high']
+            low = tmpframe.loc[key,'low']
             rate = tmpframe.loc[key, 'rate']
             key = "0" * (6-len(str(key))) + str(key)
-            # if key == "000839":
-            #     print value, rate
+            # if key == "000002":
+            #     print close, rate
             # print key, value
-            redisc.set(key, [value,rate])
+            redisc.set(key, [close, preclose, high, low, rate])
+        logging.getLogger().info("update redis finished!")
 
 
     '''
@@ -145,7 +162,7 @@ class RealPrice():
             else:
                 subproc=multiprocessing.Process(target=self.get_data,args=(self.stock_lists[i*200:(i+1)*200],timestamp,i))
             subproc.start()
-            subproc.join(60)
+        subproc.join(60)
         self.priceFrame=self.get_summary()
 
 

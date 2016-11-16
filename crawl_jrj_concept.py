@@ -63,8 +63,8 @@ class CrawlJrjConcept:
 if __name__ == "__main__":
     crawler = CrawlJrjConcept()
     conceptDict = {
-        "topic": "ledzm",
-        "name": u"LED"
+        "topic": "s0gzgg",
+        "name": u"SZGZ"
     }
     try:
         crawler.crawl(conceptDict)

@@ -49,13 +49,13 @@ if __name__ == "__main__":
                     filename='./logs/ycj_concept.log',
                     filemode='w')
     crawler = CrawlYcjConcept()
-    for i in range(2297, 2298):
+    for i in range(1928, 1929):
         print i
         if i == 432:
             continue
         conceptDict = {
             "topic": "%s"%i,
-            "name": ""
+            "name": "SZGZ"
         }
         try:
             crawler.crawl(conceptDict)

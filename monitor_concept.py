@@ -34,7 +34,12 @@ class Monitor_concept():
                     for stockid, stockname in self.concept_stock_dict[concept_name]:
                         try:
                             # print stockid, stockname
-                            rate = eval(self.redis.get(stockid))[1]
+                            redis_value = eval(self.redis.get(stockid))
+                            if len(redis_value) != 5:
+                                continue
+                            rate = redis_value[4]
+                            if int(rate) < -15:
+                                continue
                             value_list.append([stockid, stockname, rate])
                         except:
                             pass
