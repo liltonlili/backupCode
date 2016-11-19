@@ -128,7 +128,7 @@ mongodb = pymongo.MongoClient(mongourl)
 results = mongodb.stock.ZDT_by_date.find({"date": {"$gte": "20160101"}})
 count = 0
 dframe = DataFrame()
-mysqls = common.mysqldata()
+mysqls = common.mysqldb
 
 global diOut_dict, backTen_dict, tenMonitor_dict
 diOut_dict = {}    # 开板没有回封的记录
