@@ -203,4 +203,4 @@ def reControlCx(start_day = '20160101', end_day = dt.datetime.today().strftime("
                                          True)
 
 if __name__ == "__main__":
-    reControlCx(start_day = '20161117', end_day = '20161115')
+    reControlCx(start_day='20150624', end_day='20160108', force = 1)

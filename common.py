@@ -79,7 +79,7 @@ class mysqldata:
             return e
 
 global mysqldb
-# mysqldb = mysqldata()
+mysqldb = mysqldata()
 
 ## [(2010,1),(2010,2)]
 def get_ympair(sty,stm,eny,enm):
@@ -839,6 +839,22 @@ def get_minly_frame(stockid, endDate, id_type =1):
             dtv = get_mydb_sqlquery(zssql)
     return dtv
 
+# 得到股票代码在某天内的分钟级数据
+# datadate, datatime, ticker, exchangecd, lastprice, volume, side
+def get_fenbi_frame(stockid, endDate):
+    tableTime = format_date(endDate,"%Y%m")
+    endDate = format_date(endDate,"%Y%m%d")
+    stockid = "0"*(6-len(str(int(stockid))))+str(int(stockid))
+    # table = "equity_pricefenbi%s"%tableTime
+    table = "MarketDataTDB.equity_pricefenbi%s"%tableTime
+    dtsql = "SELECT * from %s where ticker = %s and datadate = %s"%(table,int(stockid),int(endDate))
+    dtv = get_mydb_sqlquery(dtsql)
+    if len(dtv) == 0:
+        table = "MarketDataL1.equity_pricefenbi%s"%tableTime
+        dtsql = "SELECT * from %s where ticker = %s and datadate = %s"%(table,int(stockid),int(endDate))
+        dtv = get_mydb_sqlquery(dtsql)
+    return dtv
+
 # generate a html file
 '''
 series =
@@ -980,3 +996,24 @@ def get_html_curve(dframe, html_name, save_dir = "./"):
     fHandler = open(os.path.join(save_dir,"%s.html"%html_name), 'wb')
     fHandler.write(text)
     fHandler.close()
+
+# 判断一个股票在某天，是否最高点涨停过
+# 条件1： 滤除开盘就涨停的时间段，从打开涨停之后算
+# fenbi_frame: datadate, datatime, ticker, exchangecd, lastprice, volume, side
+def get_hit_status(stockid, day):
+    fenbi_frame = get_fenbi_frame(stockid, day) # 得到了分钟线数据
+    last_day = get_last_date(day)
+    last_close = get_mysqlData([stockid], [last_day]).loc[0, 'CLOSE_PRICE']   # 昨日收盘价
+    zt_price = round(last_close*1.1, 2)
+    fenbi_frame = fenbi_frame[fenbi_frame.datatime >= "09:30:00"]   # 不考虑集合竞价的情况
+    fenbi_frame = fenbi_frame[fenbi_frame.volume != 0]  # 成交量为0，滤除
+    fenbi_frame.to_csv("tmp_trace.csv", encoding='gbk')
+    for idx in fenbi_frame.index.values:
+        if float(fenbi_frame.loc[idx, 'lastprice']) != zt_price:
+            break
+    filtered_frame = fenbi_frame.loc[idx:,:]
+    hit_frame = filtered_frame[filtered_frame.lastprice == zt_price]
+    if len(hit_frame) > 0:
+        return True
+    else:
+        return False
