@@ -961,13 +961,13 @@ def curve_html(dframe):
         time_list = str(list(dframe.loc[:, 'barTime']))
         time_list = time_list.replace("u", "")
         # data = str([[time_list[i], data_list[i]] for i in range(len(data_list))])
-        c_name = QueryStockMap(id = name)[0]
+        c_name = QueryStockMap(id = name)[0].encode("utf-8")
         tmp_dict = {
             "name":name,
             "type":'line',
             "data":data_list
         }
-        list_legend.append(c_name)
+        list_legend.append(name)
         list_series.append(tmp_dict)
     list_series = str(list_series)
     list_series = list_series.replace('"[','').replace("'data': '[","data:[").replace("]'","]").replace("'type':","type:").replace("'name':","name:")

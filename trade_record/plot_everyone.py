@@ -99,10 +99,14 @@ def plot_trade_figure(stockid, current_date, current_dframe, trade_next_date, ne
 
 
 
-def main(csv_dir, csv_name, out_dir):
-    aframe = pd.read_csv(os.path.join(csv_dir, csv_name), encoding='GBK')
+def main(csv_dir, csv_name, out_dir, delta_day = 5):
+    if ".csv" in csv_name:
+        aframe = pd.read_csv(os.path.join(csv_dir, csv_name), encoding='GBK')
+    else:
+        aframe = pd.read_excel(os.path.join(csv_dir, csv_name), encoding='GBK')
     aframe.columns = ['trade_date', 'time', 'stockid', 'name', 'direction', 'price', 'cjje', 'fsje', 'bcje']
     aframe['stockid'] = aframe['stockid'].apply(lambda x: "0"*(6-len(str(x))) + str(x))
+    aframe['trade_date'] = aframe['trade_date'].apply(lambda x: common.format_date(x, "%Y/%m/%d"))
     aframe['trade_date'] = aframe['trade_date'].apply(lambda x: x.split("/")[0]+"/"+"0"*(2-len(x.split("/")[1]))+x.split("/")[1] + "/" + "0"*(2-len(x.split("/")[2]))+x.split("/")[2])
     total_dict = {}
 
@@ -127,7 +131,7 @@ def main(csv_dir, csv_name, out_dir):
         trade_time_dict = trade_util.get_stockid_map(dframe)
         for stockid in trade_time_dict.keys():
             stockid = "0"*(6-len(str(stockid))) + str(stockid)
-            trade_next_date = trade_util.get_next_trade_date(stockid, current_date, total_dict)
+            trade_next_date = trade_util.get_next_trade_date(stockid, current_date, total_dict, delta_day)
             if trade_next_date is None:
                 logging.getLogger().error("No valid next trade date for %s, current_date:%s"%(stockid, current_date))
                 continue
@@ -141,9 +145,10 @@ def main(csv_dir, csv_name, out_dir):
 
 
 if __name__ == '__main__':
-    csv_dir = u'D:/Money/lilton_code/Market_Mode/learnModule/lhc_pic/save'
-    csv_name = u'令胡冲交割单_带时间.csv'
-    out_dir = u'D:/Money/lilton_code/Market_Mode/交割单/令胡冲'
+    csv_dir = u'D:/Money/lilton_code/Market_Mode/learnModule/著名刺客分析'
+    csv_name = u'刺客交割单.csv'
+    out_dir = u"D:/Money/lilton_code/Market_Mode/交割单/著名刺客"
+    delta_day = 10  # 可能的最长持股时间, 用来判断是否有遗漏，N天之后该股票都没有操作
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
 
@@ -152,4 +157,4 @@ if __name__ == '__main__':
                     datefmt='%Y-%m-%d %H:%M:%S.000',
                     filename=os.path.join(out_dir, u'交割单.log'),
                     filemode='w+')
-    main(csv_dir, csv_name, out_dir)
+    main(csv_dir, csv_name, out_dir, delta_day)

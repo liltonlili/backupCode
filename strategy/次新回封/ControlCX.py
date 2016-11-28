@@ -9,7 +9,7 @@ import common
 import copy
 
 '''
-该代码从每日的开板、封板等数据进行追踪
+该代码从每日的开板、封板等数据进行追踪， 记录了次新的开封板分布、幅度等
 '''
 
 
@@ -203,4 +203,4 @@ def reControlCx(start_day = '20160101', end_day = dt.datetime.today().strftime("
                                          True)
 
 if __name__ == "__main__":
-    reControlCx(start_day='20150624', end_day='20160108', force = 1)
+    reControlCx(start_day='20161122', end_day='20161126')

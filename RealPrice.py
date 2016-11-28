@@ -12,6 +12,9 @@ from threading import *
 import tushare as ts
 import logging
 import redis
+import sys
+sys.path.append("D:/projects/report_download/src/lib")
+import http_downloader
 
 frame_list=[]
 global redisc
@@ -59,11 +62,13 @@ class RealPrice():
                         break
                     time.sleep(5)
                 zs.to_csv(os.path.join(dir,'stock_list.csv'))
+                stock_list=list(set(zs.index.values))
             except:
                 zs = pd.read_csv(os.path.join(dir, "stock_list.csv"))
+                zs.columns = [u'code', u'name', u'industry', u'area', u'pe', u'outstanding',u'totals', u'totalAssets', u'liquidAssets', u'fixedAssets', u'reserved',u'reservedPerShare', u'esp', u'bvps', u'pb', u'timeToMarket']
+                stock_list=list(set(zs.code.values))
             print "initialize stocklist finished!"
 
-            stock_list=list(set(zs.index.values))
             # stock_list=list(set(zs.code.values))
             stock_lists=[]
 
@@ -88,7 +93,18 @@ class RealPrice():
         try:
             r=requests.get(url)
         except:
-            r=requests.get(url)
+            count = 0
+            while True:
+                ip = http_downloader.get_proxyip(dynamic=False)
+                proxies = {'http':'http://{}:{}'.format(ip['host'], ip['port'])}
+                try:
+                    r=requests.get(url, proxies=proxies)
+                    if r.status_code == 200 and len(r.content) > 50:
+                        break
+                except:
+                    print "will retry %s times to get the sina data"%count
+                    count += 1
+
         content=r.content.decode('gbk')
         Dframe=self.parse_content(content,timestamp)
         Dframe.to_csv(os.path.join(dir,'%s_realtime.csv'%i))
@@ -119,7 +135,11 @@ class RealPrice():
             Inframe.loc[i,'low']=low
 
             i+=1
-        Inframe['rate']=100*(Inframe['close'].astype(np.float64)-Inframe['preclose'].astype(np.float64))/Inframe['preclose'].astype(np.float64)
+        try:
+            Inframe['rate']=100*(Inframe['close'].astype(np.float64)-Inframe['preclose'].astype(np.float64))/Inframe['preclose'].astype(np.float64)
+        except Exception, err:
+            print "Exceptions when parse content"
+            print content
         Inframe['rate']=Inframe['rate'].round(decimals=2)
         # Inframe['hate']=100*(Inframe['high'].astype(np.float64)-Inframe['preclose'].astype(np.float64))/Inframe['preclose'].astype(np.float64)
         # Inframe['hate']=Inframe['hate'].round(decimals=2)`

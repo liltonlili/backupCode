@@ -27,7 +27,7 @@ data = {
     'pwdlevel' : 'Y',
     'loginType' : 1,
     'userName' : 'liltonlili',
-    'pwd' : 'taoguba366381',
+    'pwd' : 'taoguba890928',
     'save' : 'Y'
 }
 
@@ -242,12 +242,21 @@ if __name__ == "__main__":
     #                 filename=os.path.join(u"D:/Money/lilton_code/Market_Mode/learnModule/令胡冲/log","log.txt"),
     #                 filemode='w')
 
-    logging.config.fileConfig("./conf/conf_log.txt", defaults={'logdir': os.path.join(u"D:/Money/lilton_code/Market_Mode/learnModule/logs/fqza","")})
-    logging.getLogger().info("report main startup")
 
-    ID = '190857' #
+
+    ID = '591447' #
+    logdir = os.path.join(u"D:/Money/lilton_code/Market_Mode/learnModule/logs/%s"%ID,"")
+    mydir = u'D:/Money/lilton_code/Market_Mode/learnModule/%s'%ID
+    if not os.path.exists(logdir):
+        os.makedirs(logdir)
+    logging.config.fileConfig("./conf/conf_log.txt", defaults={'logdir': logdir})
+    logging.getLogger().info("report main startup")
     logging.getLogger().info(ID)
-    mydir = u'D:/Money/lilton_code/Market_Mode/learnModule/fqza'
+
+    if os.path.exists(os.path.join(mydir, "")):
+        pass
+    else:
+        os.makedirs(os.path.join(mydir, ""))
     global txtHandler
     txtHandler = open(os.path.join(mydir,"record.txt"),'w')
     docHandler = Document()

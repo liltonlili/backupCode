@@ -252,7 +252,7 @@ def plot_back_open_num(ax, markersize=8):
 
 if __name__ == "__main__":
     start_day = "20160108"
-    end_day = "20161118"
+    end_day = "20161124"
     global mongodb, results, markers
     markers = {0:".", 1:"o", 2:"<", 3:"^", 4:"h", 5:"*"}
     global htmlType1

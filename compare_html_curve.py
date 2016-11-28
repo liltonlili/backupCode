@@ -5,8 +5,8 @@ from pandas import DataFrame, Series
 import numpy as np
 
 dframe = DataFrame()
-date = '2016-11-9'
-stock_list = ['002716', '600547', '002155', '600988', '601069', '600489']
+date = '2014-12-12'
+stock_list = ['601800', '600528']
 for stock in stock_list:
     tmp_frame = common.get_minly_frame(stock, date)
     tmp_frame = tmp_frame[['bartime', 'closeprice']]
@@ -22,4 +22,4 @@ for stock in stock_list:
     dframe = pd.concat([dframe, tmp_frame], axis=1)
 
 dframe.reset_index(range(len(dframe)), inplace=True)
-common.get_html_curve(dframe, "try4", save_dir="C:/Users/li.li/Desktop/test")
+common.get_html_curve(dframe, u"筹码散了不好带了", save_dir="C:/Users/li.li/Desktop/test")
