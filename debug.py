@@ -6,11 +6,10 @@ import tushare as ts
 import time
 import datetime
 import common
+import pandas as pd
 
-print common.get_hit_status("300553", "20161117")
-print common.get_hit_status("603258", "20161117")
-print common.get_hit_status("603667", "20161114")   # True
+stock = ['603060', '603322', '603060']
+day = '20161202'
+tmp_dframe = common.get_dataframe_option1(stock, day)
+common.get_html_curve([tmp_dframe], "complex_html", html_types=[1], title_list=[u'测试'])
 
-ts.get_stock_basics()
-# print common.get_day_k_status("002436", "20161111")
-# print common.get_day_k_status("000020", "20161111")

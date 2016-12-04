@@ -7,6 +7,9 @@ import numpy as np
 import tushare as ts
 import time
 import requests
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 import pymongo
 from pandas import DataFrame,Series
 import matplotlib.pyplot as plt
@@ -24,12 +27,14 @@ def connectdb():
     # mydbs='a'
     # mydb='b'
     # dydb='c'
-    mydbs=mysqldb({'host': 'db-bigdata.wmcloud-qa.com', 'user': 'app_bigdata_ro', 'pw': 'Welcome_20141217', 'db': 'bigdata', 'port': 3312})
+    # mydbs=mysqldb({'host': 'db-bigdata.wmcloud-qa.com', 'user': 'app_bigdata_ro', 'pw': 'Welcome_20141217', 'db': 'bigdata', 'port': 3312})
+    mydbs = 'a'
     mydb = mysqldb({'host': '10.21.232.43', 'user': 'app_gaea_ro', 'pw': 'Welcome20150416', 'db': 'MarketDataL1', 'port': 5029})  ##分笔，分钟级
     dydb  = mysqldb({'host': 'db-datayesdb-ro.wmcloud.com', 'user': 'app_gaea_ro', 'pw': 'EQw6WquhnCKPp8Li', 'db': 'datayesdbp', 'port': 3313})
     cardb = mysqldb({'host': 'db-news.wmcloud-stg.com', 'user': 'app_bigdata_ro', 'pw': 'Welcome_20141217', 'db': 'news', 'port': 3310})
     souhudbs = mysqldb({'host': 'db-datayesdb-ro.wmcloud.com', 'user': 'app_gaea_ro', 'pw': 'EQw6WquhnCKPp8Li', 'db': 'datayesdb', 'port': 3313})
-    souhudbi = mysqldb({'host': 'db-bigdata.wmcloud-qa.com', 'user': 'app_bigdata_ro', 'pw': 'Welcome_20141217', 'db': 'bigdata', 'port': 3312})
+    # souhudbi = mysqldb({'host': 'db-bigdata.wmcloud-qa.com', 'user': 'app_bigdata_ro', 'pw': 'Welcome_20141217', 'db': 'bigdata', 'port': 3312})
+    souhudbi = 'a'
     # souhudbi = mydbs
     # localdb = mysqldb({'host': '127.0.0.1', 'user': 'root', 'pw': '', 'db': 'stock', 'port': 3306})
     localdb = None
@@ -192,22 +197,39 @@ def get_day_k_status(stockid, date):
 def get_mysqlData(stock_list,date_list):
     # mysqldb = mysqldata()
     global mysqldb
-    stock_list = [str(x).replace('sh',"").replace('sz',"").replace(".","").replace("SH","").replace("SZ","") for x in stock_list]
+    stock_list_zs = [x for x in stock_list if u"ZS" in x]   # 指数
+    stock_list = [str(x).replace('sh',"").replace('sz',"").replace(".","").replace("SH","").replace("SZ","") for x in stock_list if u'ZS' not in x]
     stock_list = ['0'*(6-len(str(x)))+str(x) for x in stock_list]
     date_list = [format_date(x,"%Y-%m-%d") for x in date_list]
     date_list = str(date_list).replace("[","(").replace("]",")")
     # print stock_list
     # print date_list
 
+    dataFrame = DataFrame()
+    # 个股
     table="vmkt_equd"
     if len(stock_list) > 0:
         stock_list = str(stock_list).replace("[","(").replace("]",")")
         query = "SELECT TICKER_SYMBOL, SEC_SHORT_NAME, TRADE_DATE, PRE_CLOSE_PRICE, OPEN_PRICE, HIGHEST_PRICE, LOWEST_PRICE, CLOSE_PRICE, ACT_PRE_CLOSE_PRICE " \
                 "from %s where TICKER_SYMBOL in %s and TRADE_DATE in %s"%(table,stock_list, date_list)
-    else:
-        query = 'SELECT TICKER_SYMBOL, SEC_SHORT_NAME, TRADE_DATE, PRE_CLOSE_PRICE, OPEN_PRICE, HIGHEST_PRICE, LOWEST_PRICE, CLOSE_PRICE, ACT_PRE_CLOSE_PRICE  ' \
-                'from %s where TRADE_DATE in %s and TICKER_SYMBOL < "700000" '%(table,date_list)
-    dataFrame = mysqldb.dydb_query(query)
+        dataFrame = mysqldb.dydb_query(query)
+    # else:
+    #     query = 'SELECT TICKER_SYMBOL, SEC_SHORT_NAME, TRADE_DATE, PRE_CLOSE_PRICE, OPEN_PRICE, HIGHEST_PRICE, LOWEST_PRICE, CLOSE_PRICE, ACT_PRE_CLOSE_PRICE  ' \
+    #             'from %s where TRADE_DATE in %s and TICKER_SYMBOL < "700000" '%(table,date_list)
+    # dataFrame = mysqldb.dydb_query(query)
+
+    # 指数
+    stock_list_zs = [x.replace("ZS", "") for x in stock_list_zs]
+    stock_list_zs = ['0'*(6-len(str(x))) + str(x) for x in stock_list_zs]
+    table = "vmkt_idxd"
+    if len(stock_list_zs) > 0:
+        stock_list_zs = str(stock_list_zs).replace("[","(").replace("]",")")
+        query = "SELECT TICKER_SYMBOL, SEC_SHORT_NAME, TRADE_DATE, PRE_CLOSE_INDEX, OPEN_INDEX, HIGHEST_INDEX, LOWEST_INDEX, CLOSE_INDEX " \
+                "from %s where TICKER_SYMBOL in %s and TRADE_DATE in %s"%(table,stock_list_zs, date_list)
+        dataFrame2 = mysqldb.dydb_query(query)
+        dataFrame2.columns = ["TICKER_SYMBOL", "SEC_SHORT_NAME", "TRADE_DATE", "PRE_CLOSE_PRICE", "OPEN_PRICE", "HIGHEST_PRICE", "LOWEST_PRICE", "CLOSE_PRICE"]
+        dataFrame2['ACT_PRE_CLOSE_PRICE'] = dataFrame2['PRE_CLOSE_PRICE']
+        dataFrame = pd.concat([dataFrame, dataFrame2], axis=0)
     return dataFrame
 
 
@@ -649,20 +671,22 @@ def plotFrame(dataFrame,x='',y=[],titles=[],point=100, marker=False):
 # 返回是['中国重工', 601989]
 def QueryStockMap(id='',name=''):
     global mongodb
+    if id == 'ZS000001':
+        return [u'上证指数', u'ZS000001']
     if id != '':
         queryResult = mongodb.stock.stockmap.find_one({"stockid":id})
         if queryResult is not None:
             return [queryResult['stock_name'],queryResult['stockid']]
         else:
-            return [0,0]
+            return ["",""]
     elif name != '':
         queryResult = mongodb.stock.stockmap.find_one({"stock_name":name})
         if queryResult is not None:
             return [queryResult['stock_name'],queryResult['stockid']]
         else:
-            return [0,0]
+            return ["",""]
     else:
-        return [0,0]
+        return ["",""]
 
 # 根据条件，对stockList中的股票进行弹窗提示，返回符合条件的List,股票代码
 def WindowShow(stockList, operate, number, message):
@@ -819,15 +843,19 @@ def get_daily_frame(code, start_date, end_date, id_type = 1):
 def get_minly_frame(stockid, endDate, id_type =1):
     tableTime = format_date(endDate,"%Y%m")
     endDate = format_date(endDate,"%Y%m%d")
-    if id_type == 1:
+    if id_type == 1:    # 个股
+        if int(stockid) < 600000:
+            exchange = 'XSHE'   # 深圳
+        else:
+            exchange = 'XSHG'   # 上海
         stockid = "0"*(6-len(str(int(stockid))))+str(int(stockid))
         # table = "equity_pricefenbi%s"%tableTime
         table = "MarketDataTDB.equity_pricemin%s"%tableTime
-        dtsql = "SELECT * from %s where ticker = %s and datadate = %s"%(table,stockid,endDate)
+        dtsql = 'SELECT * from %s where ticker = %s and datadate = %s and exchangecd = "%s"'%(table,stockid,endDate, exchange)
         dtv = get_mydb_sqlquery(dtsql)
         if len(dtv) == 0:
             table = "MarketDataL1.equity_pricemin%s"%tableTime
-            dtsql = "SELECT * from %s where ticker = %s and datadate = %s"%(table,stockid,endDate)
+            dtsql = 'SELECT * from %s where ticker = %s and datadate = %s and exchangecd = "%s"'%(table,stockid,endDate, exchange)
             dtv = get_mydb_sqlquery(dtsql)
     else:
         table = "MarketDataTDB.equity_pricemin%s"%tableTime
@@ -846,12 +874,16 @@ def get_fenbi_frame(stockid, endDate):
     endDate = format_date(endDate,"%Y%m%d")
     stockid = "0"*(6-len(str(int(stockid))))+str(int(stockid))
     # table = "equity_pricefenbi%s"%tableTime
+    if int(stockid) < 600000:
+        exchange = 'XSHE'   # 深圳
+    else:
+        exchange = 'XSHG'   # 上海
     table = "MarketDataTDB.equity_pricefenbi%s"%tableTime
-    dtsql = "SELECT * from %s where ticker = %s and datadate = %s"%(table,int(stockid),int(endDate))
+    dtsql = 'SELECT * from %s where ticker = %s and datadate = %s and  exchangecd = "%s"'%(table, int(stockid), int(endDate), exchange)
     dtv = get_mydb_sqlquery(dtsql)
     if len(dtv) == 0:
         table = "MarketDataL1.equity_pricefenbi%s"%tableTime
-        dtsql = "SELECT * from %s where ticker = %s and datadate = %s"%(table,int(stockid),int(endDate))
+        dtsql = 'SELECT * from %s where ticker = %s and datadate = %s and exchangecd = "%s"'%(table, int(stockid), int(endDate), exchange)
         dtv = get_mydb_sqlquery(dtsql)
     return dtv
 
@@ -876,104 +908,146 @@ series =
     }
 ]
 '''
+
+
+
+# 将frame_work中的option进行替换，方便自由组合，options是准备好的text, 为list
+# option分顺序
+def set_frameWork_option(options):
+    count = 1
+    toption = []    # 最后网页中的总option
+    for option in options:
+        option = option.replace("option", "option%s"%count)
+        toption.append(option)
+        count += 1
+    toption = ";\n".join(toption) + ";"
+    return toption, count
+
+# 根据option的个数，动态调整网页中的图表个数
+def set_frameWork_charts(count):
+    inner_base = '''
+    var myChart = ec.init(document.getElementById('chartdivNum'));
+    myChart.setOption(optionNum);
+    '''
+    front_base = '<div id="chartdivNum" style="width:1600px;height:400px"></div>'
+    inner = []
+    front = []
+    for i in range(1, count):
+        inner.append(inner_base.replace("Num", str(i)))
+        front.append(front_base.replace("Num", str(i)))
+    inner = "\n".join(inner)
+    front = "\n".join(front)
+    return front, inner
+
 # LEGEND_REPLACE = ['legendA','legendB']
 # dframe 列必须为： index  bartime, stockid1, stockid2, ...
 # 根据dframe的每一个stockid列，生成一个曲线，可以点击取消
-def curve_html(dframe):
-    x = '''
-    <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-    <html>
-        <head>
-           <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-            <title>amCharts Example</title>
-            <!--link rel="stylesheet" href="style.css" type="text/css"-->
-            <script src="./conf/jquery-3.1.0.min.js" type="text/javascript"></script>
-            <script src="./conf/echarts.min.js" type="text/javascript"></script>
-            <script type="text/javascript">
-            var chart;
-
-            window.onload = function() {
-                show_pic();
-            }
-
-            function show_pic() {
-                var series=[];
-                var option = {
-                    title: {
-                        text: 'compare',
-                        left: 'center'
-                    },
-                    tooltip: {
-                        trigger: 'item',
-                        formatter: '{a} <br/>{b} : {c}'
-                    },
-                    legend: {
-                        data: LEGEND_REPLACE,
-                        left:'left'
-                    },
-                    xAxis: {
-                        type: 'category',
-                        name: 'x',
-                        splitLine: {show: false},
-                        data: XAXIS_REPLACE
-                    },
-                    yAxis: {
-                      //  type: 'value',
-                       // min: -10,
-                        //max:10
-                    },
-                    series: SERIES_REPLACE
-                };
-                var legend={left:"left",data:[]};
-                var xAxis={
-                    type: 'category',
-                    name: 'x',
-                    splitLine: {show: false},
-                    data: []
-                }
-
-                //alert(option)
-                //option["title"]={text:"hello", left:'center'};
-                //option["xAxis"]=xAxis;
-                //option["legend"]=legend;
-                //option["series"]=series;
-                console.log(option)
-                var myChart = echarts.init(document.getElementById('chartdiv'));
-                myChart.setOption(option);
-                //writeObj(option['legend'])
-            }
-
-
-
-            </script>
-        </head>
-        <body style="background-color:#EEEEEE">
-            <div id="chartdiv" style="width:800; height:800px; background-color:#FFFFFF"></div>
-        </body>
-    </html>
-'''
+def curve_option1(dframe, title = "compare", html_src = os.path.join(u"D:/Money/lilton_code/Market_Mode/rocketup/src", "")):
+    with open(os.path.join(html_src, "OPTION1.html"), 'rb') as fHandler:
+        x = fHandler.read()
     list_series = []
     list_legend = []
     for index in range(1, len(dframe.columns)):
-        name = dframe.columns[index]
+        name = dframe.columns[index]        # 股票ID
         # print name
         data_list = str(list(dframe.loc[:, name]))
         time_list = str(list(dframe.loc[:, 'barTime']))
         time_list = time_list.replace("u", "")
         # data = str([[time_list[i], data_list[i]] for i in range(len(data_list))])
         c_name = QueryStockMap(id = name)[0].encode("utf-8")
-        tmp_dict = {
-            "name":name,
-            "type":'line',
-            "data":data_list
-        }
-        list_legend.append(name)
+        if 'ZS' in name:
+            yAxis = 1
+            tmp_dict = {
+                "name":c_name,
+                "type":'line',
+                "data":data_list,
+                "yAxisIndex":yAxis,
+                "itemStyle": {"normal":{"type":'dashed', "color":'rgba(255, 255, 0, 0.8)'}}
+            }
+        else:
+            yAxis = 0
+            tmp_dict = {
+                "name":c_name,
+                "type":'line',
+                "data":data_list,
+                "yAxisIndex":yAxis,
+            }
+        if len(c_name) < 0:
+            c_name = name
+
+
+        list_legend.append(c_name)
         list_series.append(tmp_dict)
-    list_series = str(list_series)
-    list_series = list_series.replace('"[','').replace("'data': '[","data:[").replace("]'","]").replace("'type':","type:").replace("'name':","name:")
-    list_legend = str(list_legend)
-    text = x.replace("SERIES_REPLACE", list_series).replace("LEGEND_REPLACE", list_legend).replace("XAXIS_REPLACE", time_list)
+    list_series = list2str(list_series, delimiter="")
+    list_series = list_series.replace('"[','[').replace(']"',"]")
+    list_legend = list2str(list_legend)
+    text = x.replace("SERIES_REPLACE", list_series).replace("LEGEND_REPLACE", list_legend).replace("XAXIS_REPLACE", time_list).replace("TITLE", title)
     return text
+
+# 为option1准备dataframe, 如果是指数，则可以配置扩大涨跌幅
+def get_dataframe_option1(stock_list, date, zs_amplifier = 1):
+    dframe = DataFrame()
+    date = format_date(date, "%Y-%m-%d")
+    stock_list = list(set(stock_list))
+    # stock_list = ['601800', '600528']
+    dframe_list = []
+    for stock in stock_list:
+        if stock == u'ZS000001':    # 上证指数
+            tmp_frame = get_minly_frame(stock, date, id_type=0)
+            zs_amplifier = 1
+        else:
+            tmp_frame = get_minly_frame(stock, date)
+        tmp_frame = tmp_frame[['bartime', 'closeprice']]
+        yesterday = get_lastN_date(date, 1)
+        yeframe = get_mysqlData([stock],[yesterday])
+        if len(yeframe) > 0:
+            pre_close = yeframe.loc[0,'CLOSE_PRICE']
+        else:
+            pre_close = 10000
+        # 计算涨跌幅，可以扩大幅度
+        tmp_frame['closeprice'] = zs_amplifier * normalize_frame(tmp_frame['closeprice'], pre_close)
+        tmp_frame.columns = ['barTime', stock]
+        tmp_frame.set_index('barTime', inplace=True)
+        dframe_list.append(tmp_frame)
+    dframe = pd.concat(dframe_list, axis=1)
+
+    dframe.reset_index(range(len(dframe)), inplace=True)
+    return dframe
+
+
+# LEGEND_REPLACE = ['legendA','legendB']
+# dframe 列必须为： barTime(index), stockid1, Num, Details, oNum, oDetails
+# num为此刻的涨停数, details为对应的涨停股票s
+# 根据dframe的每一个stockid列，生成一个曲线，可以点击取消
+def curve_option2(dframe, html_src = os.path.join(u"D:/Money/lilton_code/Market_Mode/rocketup/src", "")):
+    # 开始替换，代码待会儿再写
+    dframe.reset_index(len(dframe), inplace=True)
+    x1_name = dframe.columns[1]      # 第一个legend的name
+    x2_name = dframe.columns[2]      # 第二个legend的name
+    x3_name = dframe.columns[4]
+    axis_data = list(dframe.barTime.values)     # x轴的横坐标
+    axis_data = str(axis_data).replace("u","")
+    x1_data = list(dframe[x1_name].values) # 指数的分时涨幅
+    x1_data = [round(x, 2) if x != "'-'" else x for x in x1_data]
+    filter_frame = dframe[['barTime', 'Num', 'Details']].dropna()
+    filter_frame['x2_data'] = "['" + filter_frame['barTime'] + "', " + filter_frame['Num'].apply(lambda x : str(x)) + ", '" + filter_frame['Details'] + "']"
+    x2_data = list(filter_frame.x2_data.values)
+    x2_data = [x.encode('utf-8') for x in x2_data]
+    x2_data = list2str(x2_data).replace('"','').replace(".0,", ",").replace("0, ]", "0, ' ']")
+
+    filter_frame = dframe[['barTime', 'oNum', 'oDetails']].dropna()
+    filter_frame['x3_data'] = "['" + filter_frame['barTime'] + "', " + filter_frame['oNum'].apply(lambda x : str(x)) + ", '" + filter_frame['oDetails'] + "']"
+    x3_data = list(filter_frame.x3_data.values)
+    x3_data = [x.encode('utf-8') for x in x3_data]
+    x3_data = list2str(x3_data).replace('"','').replace(".0,", ",").replace("0, ]", "0, ' ']")
+    with open(os.path.join(html_src, "OPTION2.html"), 'rb') as fHandler:
+        text = fHandler.read()
+    if x1_name == u'000001':
+        x1_name = '上证指数'
+    text = text.replace("X1_NAME", "'%s'"%x1_name).replace("X2_NAME", "'%s'"%str(x2_name)).replace("X3_NAME", "'%s'"%str(x3_name)).replace("AXIS_DATA", axis_data)
+    text = text.replace("X1_DATA", str(x1_data)).replace("X2_DATA", str(x2_data)).replace("X3_DATA", str(x3_data))
+    return text
+
 
 # 将一个np.array的closePrice变成%
 def normalize_frame(np_arr, last_price):
@@ -982,24 +1056,78 @@ def normalize_frame(np_arr, last_price):
     tmp_array = tmp_array.round(2)
     return tmp_array
 
+# 从日期/daydayup.csv 中 根据group进行归类，也需要将anotation里面的股票加进来
+# 得到一个dict：{"属性名":[股票id], "属性名2":[股票id]}
+def get_concept_list(day):
+    tdict = {}
+    day = format_date(day, "%Y%m%d")
+    csvfile = os.path.join(u"D:/Money/modeResee/复盘/%s"%day, "daydayup.csv")
+    dframe = pd.read_csv(csvfile, encoding='gbk')
+    dframe.dropna(subset=['group'], inplace=True)
+    for idx in dframe.index.values:
+        attr = dframe.loc[idx, 'group']
+        stcid = [dframe.loc[idx, 'stock']]
+        anotations = dframe.loc[idx, 'anotation']
+        if anotations == anotations:
+            anotations = anotations.replace(u'，', u',')
+            anotations = anotations.split(u",")
+            anotation_stcid = [QueryStockMap(name = x)[1].encode("utf-8") for x in anotations]
+            stcid.extend(anotation_stcid)
+        stcid = ['0'*(6-len(str(x)))+str(x) for x in stcid if len(str(x)) > 0]
+        if attr not in tdict:
+            tdict[attr] = stcid
+        else:
+            tmp_dict = tdict[attr]
+            tmp_dict.extend(stcid)
+            tdict[attr] = tmp_dict
+    return tdict
 
-def get_html_curve(dframe, html_name, save_dir = "./"):
-    text = curve_html(dframe)
+
+
+# dframes 为 [dframe]， 为各个option的输入数据
+# html_types 为 [html_type]， 为各个option对于的网页源码类型
+def get_html_curve(dframes, html_name, html_types = [1], title_list = [], save_dir = "./", html_src = os.path.join(u"D:/Money/lilton_code/Market_Mode/rocketup/src", "")):
+    # 读取html框架
+    with open(os.path.join(html_src, "frame_work.html"), 'rb') as fHandler:
+        frameWork = fHandler.read()
+
+    text_list = []
+    # 分别得到各个option类型的text
+    for i in range(0, len(html_types)):
+        html_type = html_types[i]
+        dframe = dframes[i]
+        title = title_list[i]
+        option = ""
+        if html_type == 1:      # 类型1， 多个股票的分时图对比
+            option = curve_option1(dframe, title = title)
+        elif html_type == 2:    # 类型2， 上证分时图（line）同涨停的分时个数（scatter）
+            option = curve_option2(dframe)
+        if len(option) > 0:
+            text_list.append(option)
+    # 合并
+    option, count =  set_frameWork_option(text_list)
+    front, inner = set_frameWork_charts(count)
+    frameWork = frameWork.replace("BODY_HEADER", front)
+    frameWork = frameWork.replace("OPTIONS", option)
+    frameWork = frameWork.replace("MYCHARTS", inner)
+
+    # 输出
     if not os.path.exists(os.path.join(save_dir, "conf/")):
         os.mkdir(os.path.join(os.path.join(save_dir, "conf/")))
-    print os.curdir
+    curdir = os.path.join("D:/Money/lilton_code/Market_Mode/rocketup", "")
     if not os.path.exists(os.path.join(save_dir, "conf/jquery-3.1.0.min.js")):
-        shutil.copy(os.path.join(os.curdir, "./conf/jquery-3.1.0.min.js"), os.path.join(save_dir, "conf/jquery-3.1.0.min.js"))
-    print os.curdir
+        shutil.copy(os.path.join(curdir, "./conf/jquery-3.1.0.min.js"), os.path.join(save_dir, "conf/jquery-3.1.0.min.js"))
     if not os.path.exists(os.path.join(save_dir, "conf/echarts.min.js")):
-        shutil.copy(os.path.join(os.curdir, "./conf/echarts.min.js"), os.path.join(save_dir, "conf/echarts.min.js"))
+        shutil.copy(os.path.join(curdir, "./conf/echarts.min.js"), os.path.join(save_dir, "conf/echarts.min.js"))
     fHandler = open(os.path.join(save_dir,"%s.html"%html_name), 'wb')
-    fHandler.write(text)
+    fHandler.write(frameWork)
     fHandler.close()
+
 
 # 判断一个股票在某天，是否最高点涨停过
 # 条件1： 滤除开盘就涨停的时间段，从打开涨停之后算
 # fenbi_frame: datadate, datatime, ticker, exchangecd, lastprice, volume, side
+# 20161101 09:25:03 1 XSHE 9.140 89400 B
 def get_hit_status(stockid, day):
     fenbi_frame = get_fenbi_frame(stockid, day) # 得到了分钟线数据
     last_day = get_last_date(day)
@@ -1017,3 +1145,131 @@ def get_hit_status(stockid, day):
         return True
     else:
         return False
+# 输入格式为 u'09:25:11' , 输出为 u'09:30'
+def convert_second_time(x_time):
+    [hour, minu, secd] = x_time.split(":")
+    if hour == u'09' and minu < u'30':
+        minu = u'30'
+    return u"%s:%s" % (hour, minu)
+
+# 将list转换为str
+# lista = ['30', '中国'] , 变成str也应该是 ['30', '中国'], 不能用str，因为str会变成unicode，\\
+# 默认用双引号分开
+def list2str(lista, delimiter = '"'):
+    if delimiter == '"':
+        return '["'+'","'.join(lista) + '"]'
+    elif delimiter == "'":
+        return "['"+"','".join(lista) + "']"
+    else:
+        return json.dumps(lista, ensure_ascii=False)
+
+
+# 在分钟级数据中，将指数和个股区分开
+def get_min_stock_id_type(stockid):
+    if "ZS" in stockid:
+        stockid = stockid.replace("ZS", "")
+        id_type = 0
+    else:
+        stockid = stockid
+        id_type = 1
+    return stockid, id_type
+
+# 分钟级，各个stock的涨幅
+def get_minly_ratio_frame(stockids, gdate):
+    dframe = DataFrame()
+    stockids = ['0'*(6-len(str(x))) + str(x) for x in stockids]
+    tmp_frame_list = []
+    for stock in stockids:
+        yesterday = get_lastN_date(gdate, 1)
+        yeframe = get_mysqlData([stock],[yesterday])
+        stock, id_type = get_min_stock_id_type(stock)
+        tmp_frame = get_minly_frame(stock, gdate, id_type=id_type)
+        tmp_frame = tmp_frame[['bartime', 'closeprice']]
+
+        if len(yeframe) > 0:
+            pre_close = yeframe.loc[0,'CLOSE_PRICE']
+        else:
+            pre_close = 10000
+        tmp_frame['closeprice'] = normalize_frame(tmp_frame['closeprice'], pre_close)
+        tmp_frame.columns = ['barTime', stock]
+        tmp_frame.set_index('barTime', inplace=True)
+        tmp_frame_list.append(tmp_frame)
+    dframe = pd.concat(tmp_frame_list, axis=1)
+    dframe.reset_index(range(len(dframe)), inplace=True)
+    return dframe
+
+
+# 看一个股票涨停时间
+# 返回 closetime, nonstabletime, 都是list
+# closetime 为最后一次封死后就不再开板的时间，为长度为1的list，可能为空
+# nonstabletime为临时封板的时间，长度不固定，可能为空
+# 最后会做一次统一，将秒级数据变成分钟级
+def zt_time_details(stockid, day):
+    # a0 = time.time()
+    dframe = get_fenbi_frame(stockid, day)        # 用分笔细节数据来看
+    # a1 = time.time()
+    # print "%s to get fenbidata"%(a1 - a0)
+    last_day = get_last_date(day)
+    # a2 = time.time()
+    last_close = get_mysqlData([stockid], [last_day])
+    if len(last_close) == 0:
+        print "[warnings] no last close for %s, last_day:%s, will skip" %(stockid, last_day)
+        return [], []
+    last_close = last_close.loc[0, 'CLOSE_PRICE']   # 昨日收盘价
+    # a3 = time.time()
+    # print "%s to get last close price" % (a3 - a2)
+    zt_price = round(last_close*1.1, 2)
+
+    dframe['minus_zt'] = dframe['lastprice'] - zt_price
+    dframe['shifted_price'] = dframe['lastprice'].shift(1)
+    dframe.fillna(value=0, inplace=True)
+    tag = 0
+    if dframe.lastprice.values[-1] == zt_price:
+        tag = 1     # 当天收涨停
+    dframe = dframe[(dframe.lastprice == zt_price) & (dframe.lastprice > dframe.shifted_price)]
+    if len(dframe) == 0:
+        return [], []
+    if tag == 1:
+        closetime = [dframe.datatime.values[-1]]
+        nonstabletime = list(dframe.datatime.values[:-1])
+    else:
+        closetime = []
+        nonstabletime = list(dframe.datatime.values)
+    # close_flag = -1 # -1代表初始态, 1代表所有的涨停都为临时性涨停, 0代表下一个涨停就是最终涨停
+    # revindexs = list(dframe.index.values)
+    # revindexs.reverse()
+    # last_price = 0
+    # closetime = []
+    # nonstabletime = []
+    # # a4 = time.time()
+    # # print "%s for preparation" % (a4 - a3)
+    # for idx in revindexs:
+    #     if close_flag == -1:    # 初始态
+    #         if float(dframe.loc[idx, 'lastprice']) == zt_price:
+    #             close_flag = 0
+    #         else:
+    #             close_flag = 1
+    #     else:
+    #         curr_price = float(dframe.loc[idx, 'lastprice'])
+    #         if last_price == zt_price and curr_price < zt_price:    # 下一个时刻涨停，此时刻还没涨停
+    #             if close_flag == 0:
+    #                 closetime.append(dframe.loc[idx+1, 'datatime'])
+    #                 close_flag = 1
+    #             else:
+    #                 nonstabletime.append(dframe.loc[idx+1, 'datatime'])
+    #
+    #     last_price = float(dframe.loc[idx, 'lastprice'])
+    # a5 = time.time()
+    # print "%s to for loop" %(a5 - a4)
+    # 将秒级别数据变成分钟级
+    closetime = [convert_second_time(x) for x in closetime]
+    nonstabletime = [convert_second_time(x) for x in nonstabletime]
+    nonstabletime = [x for x in nonstabletime if x not in closetime]
+    nonstabletime = list(set(nonstabletime))
+    # a6 = time.time()
+    # print "%s to convert" % (a6 - a5)
+    return closetime, nonstabletime
+
+
+
+# closetime, nonstable_close_time, nonstable_high_time = common.zt_time_details(stock, self.day)
