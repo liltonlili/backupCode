@@ -1,7 +1,7 @@
 import MySQLdb
 import sys
 
-class mysqldb:
+class mysqldber:
     def __init__(self,params):
         try:
             self.db=MySQLdb.connect(host=params['host'],port=params['port'],user=params['user'],passwd=params['pw'],db=params['db'],charset="utf8")

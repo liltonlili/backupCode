@@ -51,8 +51,8 @@ headers = {
     "Connection":"keep-alive",
     "Content-Type":"application/x-www-form-urlencoded",
     "Host":"www.taoguba.com.cn",
-    "Origin":"http://www.taoguba.com.cn",
-    "Referer":"http://www.taoguba.com.cn/gotoLogin",
+    "Origin":"https://www.taoguba.com.cn",
+    "Referer":"https://www.taoguba.com.cn/gotoLogin",
     "Upgrade-Insecure-Requests":1,
     "User-Agent":"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36"
 }
@@ -172,13 +172,13 @@ def get_detailed_content(href):
             if len(pic) <= 5:
                 continue
             if '.jpg' in pic:
-                file_name = "./%s_%s.jpg"%(time_date,pic_count)
+                file_name = "%s_%s.jpg"%(time_date,pic_count)
             elif ".png" in pic:
-                file_name = "./%s_%s.png"%(time_date,pic_count)
+                file_name = "%s_%s.png"%(time_date,pic_count)
             elif ".bmp" in pic:
-                file_name = "./%s_%s.bmp"%(time_date,pic_count)
+                file_name = "%s_%s.bmp"%(time_date,pic_count)
             else:
-                file_name = "./%s_%s.jpg"%(time_date,pic_count)
+                file_name = "%s_%s.jpg"%(time_date,pic_count)
             file_name = os.path.join(mydir,"pic/%s"%file_name)
             try:
                 with open(file_name, 'wb') as fhandler:
@@ -244,7 +244,7 @@ if __name__ == "__main__":
 
 
 
-    ID = '591447' #
+    ID = '157548' #
     logdir = os.path.join(u"D:/Money/lilton_code/Market_Mode/learnModule/logs/%s"%ID,"")
     mydir = u'D:/Money/lilton_code/Market_Mode/learnModule/%s'%ID
     if not os.path.exists(logdir):
@@ -253,16 +253,17 @@ if __name__ == "__main__":
     logging.getLogger().info("report main startup")
     logging.getLogger().info(ID)
 
-    if os.path.exists(os.path.join(mydir, "")):
+    if os.path.exists(os.path.join(mydir, "pic")):
         pass
     else:
-        os.makedirs(os.path.join(mydir, ""))
+        os.makedirs(os.path.join(mydir, "pic"))
     global txtHandler
     txtHandler = open(os.path.join(mydir,"record.txt"),'w')
     docHandler = Document()
 
     s = requests.Session()
-    login_url = 'http://www.taoguba.com.cn/newLogin'
+    # login_url = 'http://www.taoguba.com.cn/newLogin'
+    login_url = 'https://www.taoguba.com.cn/newLogin'
     pic_count = 0
     r = s.post(url=login_url, headers=headers, data=data, allow_redirects=True)
 
@@ -317,4 +318,4 @@ if __name__ == "__main__":
         # pass
     finally:
         txtHandler.close()
-        docHandler.save(os.path.join(mydir,"./%s.docx"%ID))
+        docHandler.save(os.path.join(mydir,"%s.docx"%ID))

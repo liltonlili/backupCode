@@ -20,19 +20,32 @@ import json
 import shutil
 
 mongourl = "localhost"
-global mongodb
+global mongodb, backsee_csv
 mongodb = pymongo.MongoClient(mongourl)
+backsee_csv = u'D:/Money/modeResee/复盘'
 
+# def connectdb():
+#     mydbs='a'
+#     mydb='b'
+#     dydb='c'
+#     localdb='a'
+#     cardb='b'
+#     souhudbs='c'
+#     souhudbi='c'
+#     return (mydbs,mydb,dydb,localdb,cardb,souhudbs,souhudbi)
+
+
+# 仅限于在公司
 def connectdb():
     # mydbs='a'
     # mydb='b'
     # dydb='c'
     # mydbs=mysqldb({'host': 'db-bigdata.wmcloud-qa.com', 'user': 'app_bigdata_ro', 'pw': 'Welcome_20141217', 'db': 'bigdata', 'port': 3312})
     mydbs = 'a'
-    mydb = mysqldb({'host': '10.21.232.43', 'user': 'app_gaea_ro', 'pw': 'Welcome20150416', 'db': 'MarketDataL1', 'port': 5029})  ##分笔，分钟级
-    dydb  = mysqldb({'host': 'db-datayesdb-ro.wmcloud.com', 'user': 'app_gaea_ro', 'pw': 'EQw6WquhnCKPp8Li', 'db': 'datayesdbp', 'port': 3313})
-    cardb = mysqldb({'host': 'db-news.wmcloud-stg.com', 'user': 'app_bigdata_ro', 'pw': 'Welcome_20141217', 'db': 'news', 'port': 3310})
-    souhudbs = mysqldb({'host': 'db-datayesdb-ro.wmcloud.com', 'user': 'app_gaea_ro', 'pw': 'EQw6WquhnCKPp8Li', 'db': 'datayesdb', 'port': 3313})
+    dydb  = mysqldber({'host': 'db-datayesdb-ro.wmcloud.com', 'user': 'app_gaea_ro', 'pw': 'EQw6WquhnCKPp8Li', 'db': 'datayesdbp', 'port': 3313})
+    mydb = mysqldber({'host': '10.21.232.43', 'user': 'app_gaea_ro', 'pw': 'Welcome20150416', 'db': 'MarketDataL1', 'port': 5029})  ##分笔，分钟级
+    cardb = mysqldber({'host': 'db-news.wmcloud-stg.com', 'user': 'app_bigdata_ro', 'pw': 'Welcome_20141217', 'db': 'news', 'port': 3310})
+    souhudbs = mysqldber({'host': 'db-datayesdb-ro.wmcloud.com', 'user': 'app_gaea_ro', 'pw': 'EQw6WquhnCKPp8Li', 'db': 'datayesdb', 'port': 3313})
     # souhudbi = mysqldb({'host': 'db-bigdata.wmcloud-qa.com', 'user': 'app_bigdata_ro', 'pw': 'Welcome_20141217', 'db': 'bigdata', 'port': 3312})
     souhudbi = 'a'
     # souhudbi = mydbs
@@ -45,24 +58,38 @@ class mysqldata:
         (self.mydbs,self.mydb,self.dydb,self.localdb,self.cardb,self.souhudbs,self.souhudbi)=connectdb()
 
     def dydbs_query(self,sqlquery):
+        self.mydbs.db.ping(True)
+        self.mydbs.db.cursor()
         return pd.read_sql(sqlquery,con=self.mydbs.db)
 
     def dydb_query(self,sqlquery):
+        self.dydb.db.ping(True)
+        self.dydb.db.cursor()
         return pd.read_sql(sqlquery,con=self.dydb.db)
 
     def mydb_query(self,sqlquery):
+        self.mydb.db.ping(True)
+        self.mydb.db.cursor()
         return pd.read_sql(sqlquery,con=self.mydb.db)
 
     def localdb_query(self,sqlquery):
+        self.localdb.db.ping(True)
+        self.localdb.cursor()
         return pd.read_sql(sqlquery,con=self.localdb.db)
 
     def car_query(self,sqlquery):
+        self.cardb.db.ping(True)
+        self.cardb.db.cursor()
         return pd.read_sql(sqlquery,con=self.cardb.db)
 
     def souhus_query(self,sqlquery):
+        self.souhudbs.db.ping(True)
+        self.souhudbs.db.cursor()
         return pd.read_sql(sqlquery,con=self.souhudbs.db)
 
     def souhui_query(self,sqlquery):
+        self.souhudbi.db.ping(True)
+        self.souhudbi.db.cursor()
         return pd.read_sql(sqlquery,con=self.souhudbi.db)
     ## stockid,stockname,concept1,concept2,concept3,concept4,concept5,concept6
     def generate_localdb_query(self,*args):
@@ -594,6 +621,9 @@ def write_mongo(mongo,date,dicts,ztNum,ztStr,dtNum,dtStr):
 def get_mongoDicts(dateEq='19890928',dateStart = '19890928', dateEnd = '19890928'):
     mongoUrl = "localhost"
     mongodb = pymongo.MongoClient(mongoUrl)
+    dateEq = format_date(dateEq, "%Y%m%d")
+    dateStart = format_date(dateStart, "%Y%m%d")
+    dateEnd = format_date(dateEnd, "%Y%m%d")
     if dateEq != "19890928":
         dateDicts=mongodb.stock.ZDT_by_date.find({"date":dateEq})
     elif dateEnd != "19890928":
@@ -671,21 +701,32 @@ def plotFrame(dataFrame,x='',y=[],titles=[],point=100, marker=False):
 # 返回是['中国重工', 601989]
 def QueryStockMap(id='',name=''):
     global mongodb
-    if id == 'ZS000001':
-        return [u'上证指数', u'ZS000001']
-    if id != '':
-        queryResult = mongodb.stock.stockmap.find_one({"stockid":id})
-        if queryResult is not None:
-            return [queryResult['stock_name'],queryResult['stockid']]
+
+    try:
+        if id == 'ZS000001':
+            return [u'上证指数', u'ZS000001']
+        if id != '':
+            id = str(int(float(id)))
+            id = "0" * (6-len(id)) + id
+            # queryResult = mongodb.stock.stockmap.find_one({"stockid":id})
+            queryResult = mongodb.stock.stockmap.find({"stockid":id}).sort("updatetime",pymongo.DESCENDING)[0]
+            if queryResult is not None:
+                return [queryResult['stock_name'],queryResult['stockid']]
+            else:
+                return ["",""]
+        elif name != '':
+            # queryResult = mongodb.stock.stockmap.find_one({"stock_name":name})
+            queryResult = mongodb.stock.stockmap.find({"stock_name":name}).sort("updatetime",pymongo.DESCENDING)[0]
+            if queryResult is not None:
+                return [queryResult['stock_name'],queryResult['stockid']]
+            else:
+                print "don't find the match ,name:%s, id:%s" %(name, id)
+                return ["",""]
         else:
+            print "don't find the match ,name:%s, id:%s" %(name, id)
             return ["",""]
-    elif name != '':
-        queryResult = mongodb.stock.stockmap.find_one({"stock_name":name})
-        if queryResult is not None:
-            return [queryResult['stock_name'],queryResult['stockid']]
-        else:
-            return ["",""]
-    else:
+    except:
+        print "don't find the match ,name:%s, id:%s" %(name, id)
         return ["",""]
 
 # 根据条件，对stockList中的股票进行弹窗提示，返回符合条件的List,股票代码
@@ -710,6 +751,7 @@ def WindowShow(stockList, operate, number, message):
     return telllist
 
 def showinfos(message):
+    return
     root = tk.Tk()
     # root.withdraw()
     root.title("Say Hello")
@@ -829,7 +871,11 @@ def get_daily_frame(code, start_date, end_date, id_type = 1):
         DEAL_AMOUNT from vmkt_equd where TRADE_DATE >= '%s' and TRADE_DATE <='%s' and TICKER_SYMBOL = '%s'"%(start_date,end_date,code)
         sub = get_mysqlData_sqlquery(sql)
     elif id_type == 0:
-        idxcode = "000001"
+        # idxcode = "000001"
+        if code not in ["000001", "399006"]:
+            idxcode = "000001"
+        else:
+            idxcode = code
         idxsql = "SELECT TICKER_SYMBOL, SEC_SHORT_NAME, TRADE_DATE, PRE_CLOSE_INDEX, OPEN_INDEX, HIGHEST_INDEX, LOWEST_INDEX, CLOSE_INDEX, \
         TURNOVER_VOL from vmkt_idxd where TRADE_DATE >= '%s' and TRADE_DATE <='%s' and TICKER_SYMBOL = '%s'"%(start_date,end_date,idxcode)
         sub = get_mysqlData_sqlquery(idxsql)
@@ -844,11 +890,13 @@ def get_minly_frame(stockid, endDate, id_type =1):
     tableTime = format_date(endDate,"%Y%m")
     endDate = format_date(endDate,"%Y%m%d")
     if id_type == 1:    # 个股
-        if int(stockid) < 600000:
+        if int(float(stockid)) < 600000:
             exchange = 'XSHE'   # 深圳
         else:
             exchange = 'XSHG'   # 上海
-        stockid = "0"*(6-len(str(int(stockid))))+str(int(stockid))
+        # stockid = "0"*(6-len(str(int(float(stockid)))))+str(int(float(stockid)))
+        stockid = int(float(stockid))
+        # print stockid
         # table = "equity_pricefenbi%s"%tableTime
         table = "MarketDataTDB.equity_pricemin%s"%tableTime
         dtsql = 'SELECT * from %s where ticker = %s and datadate = %s and exchangecd = "%s"'%(table,stockid,endDate, exchange)
@@ -974,8 +1022,6 @@ def curve_option1(dframe, title = "compare", html_src = os.path.join(u"D:/Money/
             }
         if len(c_name) < 0:
             c_name = name
-
-
         list_legend.append(c_name)
         list_series.append(tmp_dict)
     list_series = list2str(list_series, delimiter="")
@@ -983,6 +1029,26 @@ def curve_option1(dframe, title = "compare", html_src = os.path.join(u"D:/Money/
     list_legend = list2str(list_legend)
     text = x.replace("SERIES_REPLACE", list_series).replace("LEGEND_REPLACE", list_legend).replace("XAXIS_REPLACE", time_list).replace("TITLE", title)
     return text
+
+
+# group: [[0,0,2, "中信国安_银鸽投资"], [], [], ...]
+# character: "ZT"
+# concepts: 股权_上国改_...
+# days: 1201_1202_1203...
+def get_dataframe_option3(detail_group, concepts, days, character):
+    dframe = DataFrame()
+    for i in range(0, len(detail_group)):
+        dframe.loc[i, 'row'] = detail_group[i][0]
+        dframe.loc[i, 'column'] = detail_group[i][1]
+        dframe.loc[i, 'num'] = detail_group[i][2]
+        dframe.loc[i, 'stocks'] = detail_group[i][3]
+    dframe['comment'] = np.array([1]*len(dframe))
+    dframe.iloc[-1, -1] = concepts
+    dframe.iloc[-2, -1] = days
+    dframe.iloc[-3, -1] = character
+    return dframe
+
+
 
 # 为option1准备dataframe, 如果是指数，则可以配置扩大涨跌幅
 def get_dataframe_option1(stock_list, date, zs_amplifier = 1):
@@ -1013,6 +1079,31 @@ def get_dataframe_option1(stock_list, date, zs_amplifier = 1):
 
     dframe.reset_index(range(len(dframe)), inplace=True)
     return dframe
+
+
+# dframe 格式为： index row，column，num，stocks，comment
+# comment列最后一个是concepts_concepts_..., 该列倒数第二个是day_day_day..., 倒数第三个是title
+# 据此生成html
+def curve_option3(dframe, html_src=os.path.join(u"D:/Money/lilton_code/Market_Mode/rocketup/src", "")):
+    # 先还原出来data
+    # dframe['data'] = dframe['row'] + "," + dframe['column'] + "," + dframe['num'] + dframe['stocks']
+    data = []
+    for idx in dframe.index.values:
+        data.append([dframe.loc[idx, 'row'], dframe.loc[idx, 'column'], dframe.loc[idx, 'num'], dframe.loc[idx, 'stocks']])
+
+    # data = list(dframe.data.values)
+    # data = [[x] for x in data]
+    data = list2str(data, delimiter="")
+    # 再还原出来concepts
+    concepts = dframe.iloc[-1, -1].split("_")
+    concepts = list2str(concepts)
+    days = dframe.iloc[-2, -1].split("_")
+    days = list2str(days)
+    title = dframe.iloc[-3, -1]
+    with open(os.path.join(html_src, "OPTION3.html"), 'rb') as fHandler:
+        text = fHandler.read()
+    text = text.replace("DAYS", str(days)).replace("CONCEPTS", str(concepts)).replace("DATA", str(data)).replace("TITLE", "'%s'"%title).replace(".0,", ",")
+    return text
 
 
 # LEGEND_REPLACE = ['legendA','legendB']
@@ -1058,20 +1149,24 @@ def normalize_frame(np_arr, last_price):
 
 # 从日期/daydayup.csv 中 根据group进行归类，也需要将anotation里面的股票加进来
 # 得到一个dict：{"属性名":[股票id], "属性名2":[股票id]}
-def get_concept_list(day):
+def get_concept_list(day, csvfile = ""):
     tdict = {}
     day = format_date(day, "%Y%m%d")
-    csvfile = os.path.join(u"D:/Money/modeResee/复盘/%s"%day, "daydayup.csv")
+    if csvfile == "":
+        csvfile = os.path.join(u"D:/Money/modeResee/复盘/%s"%day, "daydayup.csv")
     dframe = pd.read_csv(csvfile, encoding='gbk')
     dframe.dropna(subset=['group'], inplace=True)
     for idx in dframe.index.values:
         attr = dframe.loc[idx, 'group']
-        stcid = [dframe.loc[idx, 'stock']]
-        anotations = dframe.loc[idx, 'anotation']
-        if anotations == anotations:
+        stcid = [int(float(dframe.loc[idx, 'stock']))]
+        if u'anotation' in dframe.columns:
+            anotations = dframe.loc[idx, 'anotation']
+        else:
+            anotations = 'AAA'
+        if (anotations == anotations) and (anotations != 'AAA'):
             anotations = anotations.replace(u'，', u',')
             anotations = anotations.split(u",")
-            anotation_stcid = [QueryStockMap(name = x)[1].encode("utf-8") for x in anotations]
+            anotation_stcid = [QueryStockMap(name = x.replace(u' ', u''))[1].encode("utf-8") for x in anotations]
             stcid.extend(anotation_stcid)
         stcid = ['0'*(6-len(str(x)))+str(x) for x in stcid if len(str(x)) > 0]
         if attr not in tdict:
@@ -1081,7 +1176,6 @@ def get_concept_list(day):
             tmp_dict.extend(stcid)
             tdict[attr] = tmp_dict
     return tdict
-
 
 
 # dframes 为 [dframe]， 为各个option的输入数据
@@ -1099,11 +1193,14 @@ def get_html_curve(dframes, html_name, html_types = [1], title_list = [], save_d
         title = title_list[i]
         option = ""
         if html_type == 1:      # 类型1， 多个股票的分时图对比
-            option = curve_option1(dframe, title = title)
+            option = curve_option1(dframe, title=title)
         elif html_type == 2:    # 类型2， 上证分时图（line）同涨停的分时个数（scatter）
             option = curve_option2(dframe)
+        elif html_type == 3:    # 类型3， 直角坐标系下的热力图，显示每天对应概念的热度
+            option = curve_option3(dframe)
         if len(option) > 0:
             text_list.append(option)
+
     # 合并
     option, count =  set_frameWork_option(text_list)
     front, inner = set_frameWork_charts(count)
@@ -1122,6 +1219,22 @@ def get_html_curve(dframes, html_name, html_types = [1], title_list = [], save_d
     fHandler = open(os.path.join(save_dir,"%s.html"%html_name), 'wb')
     fHandler.write(frameWork)
     fHandler.close()
+
+
+# 同一个html下，可以查看多个股票多个日期的分时图走势
+def get_html_curve1_multi_date(stock_list, date_list, save_dir, html_name):
+    dframe_list = []
+    title_list = []
+    html_types = []
+    for date in date_list:
+        dframe = get_dataframe_option1(stock_list, date)
+        dframe_list.append(dframe)
+        title_list.append(date)
+        html_types.append(1)
+
+    get_html_curve(dframe_list, html_name, html_types=html_types, title_list=title_list, save_dir=save_dir)
+
+
 
 
 # 判断一个股票在某天，是否最高点涨停过
@@ -1145,6 +1258,8 @@ def get_hit_status(stockid, day):
         return True
     else:
         return False
+
+
 # 输入格式为 u'09:25:11' , 输出为 u'09:30'
 def convert_second_time(x_time):
     [hour, minu, secd] = x_time.split(":")
@@ -1152,10 +1267,11 @@ def convert_second_time(x_time):
         minu = u'30'
     return u"%s:%s" % (hour, minu)
 
+
 # 将list转换为str
 # lista = ['30', '中国'] , 变成str也应该是 ['30', '中国'], 不能用str，因为str会变成unicode，\\
 # 默认用双引号分开
-def list2str(lista, delimiter = '"'):
+def list2str(lista, delimiter='"'):
     if delimiter == '"':
         return '["'+'","'.join(lista) + '"]'
     elif delimiter == "'":
@@ -1173,6 +1289,7 @@ def get_min_stock_id_type(stockid):
         stockid = stockid
         id_type = 1
     return stockid, id_type
+
 
 # 分钟级，各个stock的涨幅
 def get_minly_ratio_frame(stockids, gdate):
@@ -1271,5 +1388,202 @@ def zt_time_details(stockid, day):
     return closetime, nonstabletime
 
 
+def look_up_dir(dir_path):
+    if not os.path.exists(os.path.join(dir_path,"")):
+        os.makedirs(dir_path)
 
-# closetime, nonstable_close_time, nonstable_high_time = common.zt_time_details(stock, self.day)
+
+# 给出一个stockid，日期
+# 找到对应的concept，以及相关股票id
+# 先从前10日的csv中找，如果没找到，则从L1中找，如果没找到，再到L2中找，再没找到，就为空
+# 从前10日的csv找到概念之后，先去L1找关联股票，找不到时候再去L2
+# 返回['concept', [关联股票ids]]
+def find_concept(stockid, date):
+    concept = ""
+    ids = []
+    stockid = str(int(float(stockid)))
+    stockid = '0'*(6-len(stockid)) + stockid
+    csv_concept = get_csv_concept(stockid, date)
+    if csv_concept == '':       # 在前10日的daydayup中找不到
+        L1_concept = get_cacheinfos_by_id(stockid, cache=1)
+        if L1_concept[0] == "":     # 在L1中也找不到
+            L2_concept = get_cacheinfos_by_id(stockid, cache=2)
+            concept = L2_concept[0]
+            ids = L2_concept[1]
+        else:
+            concept = L1_concept[0]
+            ids = L1_concept[1]
+    else:
+        concept = csv_concept
+        ids = find_ids(concept)
+    return [concept, ids]
+
+
+# 找到对应的股票
+def find_ids(concept):
+    ids = get_id_from_concept(concept, cache=1)
+    if len(ids) == 0:
+        ids = get_id_from_concept(concept, cache=2)
+    return ids
+
+
+# 根据日期，从csv中找到股票的concept，默认是从昨天到5天之前
+# 返回是'concept'，如果找不到，则是''
+def get_csv_concept(stockid, date, period=10):
+    global backsee_csv
+    concept = ''
+    for i in range(1,period+1):
+        search_date = get_lastN_date(date, i)   # 搜索日期
+        search_date = format_date(search_date, "%Y%m%d")
+        try:
+            dframe = pd.read_csv(os.path.join(backsee_csv, "%s/daydayup.csv" % search_date), encoding='gbk')
+            dframe.dropna(subset=['stock'], inplace=True)
+            dframe['stockid'] = dframe['stock'].apply(lambda x: int(float(x)))      # 都转换成整数型
+            dframe.dropna(subset=['group'], inplace=True)   # 将不含group的行删除
+            tframe = dframe[dframe.stock == int(float(stockid))]
+            columns = list(tframe.columns)
+            n_group = columns.index(u'group')
+            if len(tframe) > 0:
+                concept = tframe.iloc[0, n_group]
+                break
+        except Exception, err:
+            print "Search Error for daydayup on %s, err:%s, will skip this day" % (search_date, err)
+    return concept
+
+
+# 从数据库cache中找到股票对于的concept以及关联stocks
+# 返回['概念名称', '相关概念的所有股票列表']
+# 如果没找到，则返回['', []]
+def get_cacheinfos_by_id(stockid, cache=1):
+    global mongodb
+    if cache == 1:
+        result = mongodb.concepts.L1.find_one({"stockid": stockid})
+    else:
+        result = mongodb.concepts.L2.find_one({"stockid": stockid})
+
+    if result is None:  # 说明在cache中，没有该股票
+        return ["", []]
+    else:
+        return result['concept'], get_id_from_concept(result['concept'], cache)
+
+
+# 从数据库cache中，根据concept得到所有的股票ID，返回list，如果L1中不存在该概念，则返回[]
+def get_id_from_concept(concept, cache=1):
+    global mongodb
+    ids = []
+
+    if cache == 1:
+        results = mongodb.concepts.L1.find({"concept": concept})
+    else:
+        results = mongodb.concepts.L2.find({"concept": concept})
+
+    if results.count() == 0:
+        return ids
+    else:
+        for result in results:
+            ids.append(result['stockid'])
+        return ids
+
+
+# 从csv中得到具体信息，返回为 redict
+# redict = { "ZT": {"concept1": ["stockid1", "stockid2"]},
+#             "HD": {"concept1": ["stockid1"]},
+#             "DT": ...,
+#             "hole": ...,
+#             "meat": ...,
+#            }
+def get_csv_details(date, file_dir = u'D:/Money/modeResee/复盘', file_name = 'daydayup.csv'):
+    date = format_date(date, "%Y%m%d")
+    tdict = {"ZT":{}, "HD":{}, "DT":{}, "meat":{}, "hole":{}}
+    dframe = pd.read_csv(os.path.join(file_dir, "%s/%s" % (date, file_name)), encoding='gbk')
+    dframe['group'].fillna(value=u'未明', inplace=True)
+    # 规整化为000014
+    dframe['stock'] = dframe['stock'].apply(lambda x: '0'*(6-len(str(int(float(str(x)))))) + str(int(float(str(x)))))
+    for idx in dframe.index.values:
+        stockid = dframe.loc[idx, 'stock']
+        type = dframe.loc[idx, 'type']
+        group = dframe.loc[idx, 'group']
+        if group == u'未明':
+            group = find_concept(stockid, date)[0]
+            if group == '':
+                group = u'未明'
+        if group not in tdict[type].keys():
+            tdict[type][group] = [stockid]
+        else:
+            tdict[type][group].append(stockid)
+    return tdict
+
+
+# 根据历史上某日的daydayup.csv，生成基于某日行情的html
+# date代表历史上记录csv的某日
+# tdate代表行情日
+def generate_html(date, tdate=datetime.datetime.today().strftime("%Y%m%d"), file_dir=u'D:/Money/modeResee/复盘', file_name='daydayup.csv'):
+    # 读取csv内容，生成tdict
+    tdict = get_csv_details(date, file_dir, file_name)
+    # 大盘数据
+    dataframe = get_minly_ratio_frame(["ZS000001"], tdate)
+    dataframe.fillna(value = "'-'", inplace=True)
+    dataframe.set_index('barTime', inplace=True)
+    dframe_list = []
+    title_list = []
+    type_list = []
+    for types in tdict.keys():
+        for concept in tdict[types].keys():
+            # print concept
+            stock_list = tdict[types][concept]
+            # 增加上证指数
+            stock_list.append("ZS000001")
+            tmp_dframe = get_dataframe_option1(stock_list, tdate)
+            dframe_list.append(tmp_dframe)
+            add_concept = u'%s_%s' %(types,concept)
+            add_concept = add_concept.encode('utf-8')
+            title_list.append(add_concept)
+            type_list.append(1)
+    save_day = format_date(tdate, "%Y%m%d")
+    get_html_curve(dframe_list, u"learn_from_history", html_types = type_list, title_list=title_list, save_dir=os.path.join(u"D:/Money/modeResee/复盘/%s"%save_day,""))
+
+
+# 判断股票、概念组合是否在cache中
+def exist_in_cache(stockid, concept, cache = 1):
+    global mongodb
+    if concept == "":
+        return 0
+    else:
+        stockid = '0'*(6-len(str(int(float(stockid))))) + str(int(float(stockid)))
+        if cache == 1:
+            result = mongodb.concepts.L1.find_one({"stockid": stockid, "concept":concept})
+        else:
+            result = mongodb.concepts.L2.find_one({"stockid": stockid, "concept":concept})
+        if result is None:
+            return 0
+        else:
+            return 1
+
+
+def regulize_stockid(id):
+    if id != id:
+        return ""
+    elif len(str(id).replace(u' ', u'')) == 0:
+        return ""
+    else:
+        return '0'*(6-len(str(int(float(id))))) + str(int(float(id)))
+
+def get_stockids_from_concept(concept, cache=1):
+    global mongodb
+    if cache == 1:
+        results = mongodb.concepts.L1.find({"concept":concept})
+    else:
+        results = mongodb.concepts.L2.find({"concept":concept})
+    stockids = [result['stockid'] for result in results]
+    stocknames = [result['name'] for result in results]
+    return stockids, stocknames
+
+
+#从mongo中读取focused concept
+def get_focused_concepts():
+    global mongodb
+    concepts = []
+    results = mongodb.concepts.focused_concepts.find()
+    for result in results:
+        concepts.append(result['concept'])
+    return concepts

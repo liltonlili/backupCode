@@ -60,12 +60,15 @@ class RealPrice():
                     zs = ts.get_stock_basics()
                     if len(zs) > 1000:
                         break
+                    print "Failed to get stock basics, len:%s" %len(zs)
                     time.sleep(5)
                 zs.to_csv(os.path.join(dir,'stock_list.csv'))
                 stock_list=list(set(zs.index.values))
             except:
                 zs = pd.read_csv(os.path.join(dir, "stock_list.csv"))
-                zs.columns = [u'code', u'name', u'industry', u'area', u'pe', u'outstanding',u'totals', u'totalAssets', u'liquidAssets', u'fixedAssets', u'reserved',u'reservedPerShare', u'esp', u'bvps', u'pb', u'timeToMarket']
+                # print zs.columns
+                zs.columns = [u'code', u'name', u'industry', u'area', u'pe', u'outstanding',u'totals', u'totalAssets', u'liquidAssets', u'fixedAssets', u'reserved',u'reservedPerShare', u'esp', u'bvps', u'pb', u'timeToMarket', u'undp',
+       u'perundp', u'rev', u'profit', u'gpr', u'npr', u'holders']
                 stock_list=list(set(zs.code.values))
             print "initialize stocklist finished!"
 
