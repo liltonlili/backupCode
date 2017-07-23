@@ -1,0 +1,287 @@
+
+    <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+    <html>
+        <head>
+           <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+            <title>ControlCX TypeA</title>
+            <!--link rel="stylesheet" href="style.css" type="text/css"-->
+            <script src="./conf/jquery-3.1.0.min.js" type="text/javascript"></script>
+            <script src="./conf/echarts.min.js" type="text/javascript"></script>
+            <script type="text/javascript">
+            var chart;
+
+            window.onload = function() {
+                show_pic();
+            }
+
+            function show_pic() {
+				var myChart1 = echarts.init(document.getElementById('chartdiv1'));
+				var myChart2 = echarts.init(document.getElementById('chartdiv2'));
+				var myChart3 = echarts.init(document.getElementById('chartdiv3'));
+				var size1 = SIZE1;
+				var size2 = SIZE2;
+				var size3 = SIZE3;
+                var option1 = {
+					title : {
+						text : '回封数VS开板数',
+						subtext : '开板=直接开板+之前回封开板'
+					},
+					tooltip : {
+						trigger: 'axis',
+						showDelay : 0,
+						formatter : function (params) {
+							var date = new Date(params.value[0]);
+							data = date.getFullYear() + '-'
+								   + (date.getMonth() + 1) + '-'
+								   + date.getDate();
+							return data + '<br/>'
+								   + params.value[1] + ', ' 
+								   + params.value[2] + ', '
+								   + params.value[3];
+						},
+						axisPointer:{
+							show: true,
+							type : 'cross',
+							lineStyle: {
+								type : 'dashed',
+								width : 1
+							}
+						}
+					},
+					color:['red', 'green','yellow','blueviolet'],
+					toolbox: {
+						show : true,
+						feature : {
+							mark : {show: true},
+							dataView : {show: true, readOnly: false},
+							restore : {show: true},
+							saveAsImage : {show: true}
+						}
+					},
+					dataZoom: {
+						show: true,
+						start : 0
+					},
+					legend : {
+						data : ['回封数', '开板数']
+					},
+					grid: {
+						y2: 80
+					},
+					xAxis : [
+						{
+							type : 'time',
+							splitNumber:1
+						}
+					],
+					yAxis : [
+						{
+							type : 'value'
+						}
+					],
+					series : [
+						{
+							name: '回封数',
+							type: 'scatter',
+							showAllSymbol: true,
+							symbolSize: function (value){
+								return Math.round(value[2]*size1) + 2;
+							},
+							data:DATA1
+						},
+						{
+							name: '开板数',
+							type: 'scatter',
+							showAllSymbol: true,
+							symbolSize: function (value){
+								return Math.round(value[2]*size1) + 2;
+							},
+							data:DATA2
+							
+						}
+					]
+				};
+				var option2 = {
+					title : {
+						text : '收益',
+						subtext : ''
+					},
+					tooltip : {
+						trigger: 'axis',
+						showDelay : 0,
+						formatter : function (params) {
+							var date = new Date(params.value[0]);
+							data = date.getFullYear() + '-'
+								   + (date.getMonth() + 1) + '-'
+								   + date.getDate();
+							return data + '<br/>'
+								   + params.value[1] + ', ' 
+								   + params.value[2] + ', '
+								   + params.value[3];
+						},
+						axisPointer:{
+							show: true,
+							type : 'cross',
+							lineStyle: {
+								type : 'dashed',
+								width : 1
+							}
+						}
+					},
+					color:['red', 'green','yellow','blueviolet'],
+					toolbox: {
+						show : true,
+						feature : {
+							mark : {show: true},
+							dataView : {show: true, readOnly: false},
+							restore : {show: true},
+							saveAsImage : {show: true}
+						}
+					},
+					dataZoom: {
+						show: true,
+						start : 0
+					},
+					legend : {
+						data : ['收益', '连板']
+					},
+					grid: {
+						y2: 80
+					},
+					xAxis : [
+						{
+							type : 'time',
+							splitNumber:1
+						}
+					],
+					yAxis : [
+						{
+							type : 'value'
+						}
+					],
+					series : [
+						{
+							name: 'backTen',
+							type: 'scatter',
+							showAllSymbol: true,
+							symbolSize: function (value){
+								return Math.round(value[2]*size2) + 2;
+							},
+							data:DATA3
+						},
+						{
+							name: 'open',
+							type: 'scatter',
+							showAllSymbol: true,
+							symbolSize: function (value){
+								return Math.round(value[2]*size2) + 2;
+							},
+							data:DATA4
+							
+						}
+					]
+				};
+				var option3 = {
+					title : {
+						text : '回封失败',
+						subtext : ''
+					},
+					tooltip : {
+						trigger: 'axis',
+						showDelay : 0,
+						formatter : function (params) {
+							var date = new Date(params.value[0]);
+							data = date.getFullYear() + '-'
+								   + (date.getMonth() + 1) + '-'
+								   + date.getDate();
+							return data + '<br/>'
+								   + params.value[1] + ', ' 
+								   + params.value[2] + ', '
+								   + params.value[3];
+						},
+						axisPointer:{
+							show: true,
+							type : 'cross',
+							lineStyle: {
+								type : 'dashed',
+								width : 1
+							}
+						}
+					},
+					color:['red', 'green','yellow','blueviolet'],
+					toolbox: {
+						show : true,
+						feature : {
+							mark : {show: true},
+							dataView : {show: true, readOnly: false},
+							restore : {show: true},
+							saveAsImage : {show: true}
+						}
+					},
+					dataZoom: {
+						show: true,
+						start : 0
+					},
+					legend : {
+						data : ['第一次回封', '第二次回封']
+					},
+					grid: {
+						y2: 80
+					},
+					xAxis : [
+						{
+							type : 'time',
+							splitNumber:1
+						}
+					],
+					yAxis : [
+						{
+							type : 'value'
+						}
+					],
+					series : [
+						{
+							name: '第一次回封',
+							type: 'scatter',
+							showAllSymbol: true,
+							symbolSize: function (value){
+								return Math.round(value[2]*size3) + 2;
+							},
+							data:DATA5
+						},
+						{
+							name: '第二次回封',
+							type: 'scatter',
+							showAllSymbol: true,
+							symbolSize: function (value){
+								return Math.round(value[2]*size3) + 2;
+							},
+							data:DATA6
+							
+						}
+					]
+				};
+
+
+                //alert(option)
+                //option["title"]={text:"hello", left:'center'};
+                //option["xAxis"]=xAxis;
+                //option["legend"]=legend;
+                //option["series"]=series;
+                console.log(option1)
+                
+                myChart1.setOption(option2);
+				myChart2.setOption(option1);
+				myChart3.setOption(option3);
+				//myChart1.connect([myChart2,]);
+				//myChart2.connect([myChart1,]);
+            }
+			
+            </script>
+        </head>
+        <body style="background-color:#EEEEEE">
+            <div id="chartdiv1" style="width:800; height:600px; background-color:#FFFFFF"></div>
+			<div id="chartdiv2" style="height:400px"></div>
+			<div id="chartdiv3" style="height:400px"></div>
+        </body>
+    </html>

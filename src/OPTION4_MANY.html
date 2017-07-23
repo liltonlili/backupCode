@@ -1,0 +1,390 @@
+var data0 = splitData(STOCK_DATA);
+var concept_y_name = 'CONCEPT_y_NAME';
+var concept_data1_name = 'DATA1_NAME';
+var data0 = splitData(STOCK_DATA);
+
+
+function splitData(rawData) {
+    var categoryData = [];
+    var values = [];
+    var macds = [];
+    var difs = [];
+    var deas = [];
+    var vols = [];
+    for (var i = 0; i < rawData.length; i++) {
+        categoryData.push(rawData[i].splice(0, 1)[0]);
+        values.push(rawData[i])
+        vols.push(rawData[i][4]);
+    }
+    return {
+        categoryData: categoryData,
+        values: values,
+        vols: vols
+    };
+}
+
+function calculateMA(dayCount, datax) {
+    var result = [];
+    for (var i = 0, len = datax.values.length; i < len; i++) {
+        if (i < dayCount) {
+            result.push('-');
+            continue;
+        }
+        var sum = 0;
+        for (var j = 0; j < dayCount; j++) {
+            sum += datax.values[i - j][1];
+        }
+        result.push(sum / dayCount);
+    }
+    return result;
+}
+
+
+
+option = {
+    title: {
+        text: total_title,
+        x: 'center',
+        y: 0
+    },
+    dataZoom: [
+            {
+                id: 'dataZoomX',
+                type: 'slider',
+                xAxisIndex: [0, 1, 2, 3],
+                filterMode: 'filter',
+                start: 0,
+                end: 100,
+                zoomLock: false,
+            },{
+				left: 60,
+				yAxisIndex: [0],
+				fillerColor: 'rgba(126, 224, 209, 0.2)',
+				borderColor: 'rgba(126, 224, 209, 0.75)',
+				handleStyle: {
+					color: '#23c2aa'
+				}
+			},{
+				left: 60,
+				bottom:90,
+				yAxisIndex: [2],
+				fillerColor: 'rgba(126, 224, 209, 0.2)',
+				borderColor: 'rgba(126, 224, 209, 0.75)',
+				handleStyle: {
+					color: '#23c2aa'
+				}
+			}
+        ],
+		//change
+    tooltip : {
+				trigger: 'axis',
+				show:true,
+				axisPointer:{
+					show: false,
+					type : 'cross',
+					lineStyle: {
+						type : 'dashed',
+						width : 1
+					}
+				},
+				// change
+				formatter : function (params) {
+					params = params[0]
+					var date = [
+						'Close:' + params.data[6] + '<br/>',
+						'H:' + params.data[7] + '<br/>',
+						'L:' + params.data[8] + '<br/>',
+						//'ratio:' + params.data[3] + '<br/>'
+					].join('')
+					return date
+				}
+	},
+	// change
+	axisPointer: {
+		link: {xAxisIndex: 'all'},
+		label: {
+			show:false,
+			backgroundColor: '#777'
+		}
+	},
+	// define position
+    grid: [
+		// K line main chart
+        {
+			left: '10%',
+			top: '2%',
+			height: '40%'
+		}, 
+		// K line vol chart
+		{
+			left: '10%',
+			right: '10%',
+			top: '40%',
+			height: '10%'
+		},
+		// K line main chart
+        {
+			left: '10%',
+			top: '50%',
+			height: '50%'
+		}, 
+		// K line vol chart
+		{
+			left: '10%',
+			right: '10%',
+			top: '90%',
+			height: '10%'
+		},
+    ],
+	color: ['#0d6457', '#15a08b', '#23c2aa','#73d8c9',  '#9cece0','#FF4500'],
+    xAxis: [
+		// K line main chart
+        {	
+			gridIndex: 0, 
+			type: 'category',
+			data: data0.categoryData,
+			scale: true,
+			axisLine: {
+				onZero: false
+			},
+			splitLine: {
+				show: false
+			},
+			splitNumber: 20
+		},
+		// K line vol
+        {
+			gridIndex: 1,
+			type: 'category',
+			data: data0.categoryData,
+			axisLabel: {
+				show: false
+			},
+		},
+		{	
+			gridIndex: 2, 
+			type: 'category',
+			data: data1.categoryData,
+			scale: true,
+			axisLine: {
+				onZero: false
+			},
+			splitLine: {
+				show: false
+			},
+			splitNumber: 20
+		},
+    ],
+    yAxis: [
+	    // K line main chart
+		{
+			gridIndex: 3, 
+			scale: true,
+			splitArea: {
+				show: true
+			},
+			position: 'left'
+		}, 
+		// K line vol
+		{
+			gridIndex: 1,
+			axisLine: {
+				onZero: false
+			},
+			axisTick: {
+				show: false
+			},
+			splitLine: {
+				show: false
+			},
+			axisLabel: {
+				show: true
+			},
+			position: 'right'
+		},
+		// K line main chart
+		{
+			gridIndex: 2, 
+			scale: true,
+			splitArea: {
+				show: true
+			},
+			position: 'left'
+		}, 
+		// K line vol
+		{
+			gridIndex: 4,
+			axisLine: {
+				onZero: false
+			},
+			axisTick: {
+				show: false
+			},
+			splitLine: {
+				show: false
+			},
+			axisLabel: {
+				show: true
+			},
+			position: 'right'
+		},
+    ],
+	legend : {
+		data : [concept_data1_name, concept_data2_name],
+		top: '55%'
+	},
+    series: [
+        {
+            name: '555',
+            type: 'candlestick',
+            data: data0.values,
+            markPoint: {
+                data: [{
+                    name: 'XX??'
+                }]
+            },
+            markLine: {
+                silent: true,
+                data: [{
+                    yAxis: 2222,
+                }]
+            }
+        }, {
+            name: 'MA5',
+            type: 'line',
+            data: calculateMA(5, data0),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        }, {
+            name: 'MA10',
+            type: 'line',
+            data: calculateMA(10, data0),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        }, {
+            name: 'MA20',
+            type: 'line',
+            data: calculateMA(20, data0),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        }, {
+            name: 'MA30',
+            type: 'line',
+            data: calculateMA(30, data0),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        },{
+            name: 'VOL',
+            type: 'bar',
+            xAxisIndex: 1,
+            yAxisIndex: 1,
+            data: data0.vols,
+            itemStyle: {
+                normal: {
+                    color: function(params) {
+                        var colorList;
+                        if (params.data >= 0) {
+                            colorList = '#ABABAB'
+                        } else {
+                            colorList = '#14b143';
+                        }
+                        return colorList
+                    },
+					opacity: 0.5
+                }
+            }
+        }, 
+		{
+            name: '555',
+            type: 'candlestick',
+            data: data1.values,
+            markPoint: {
+                data: [{
+                    name: 'XX??'
+                }]
+            },
+            markLine: {
+                silent: true,
+                data: [{
+                    yAxis: 2222,
+                }]
+            }
+        }, {
+            name: 'MA5',
+            type: 'line',
+            data: calculateMA(5, data1),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        }, {
+            name: 'MA10',
+            type: 'line',
+            data: calculateMA(10, data1),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        }, {
+            name: 'MA20',
+            type: 'line',
+            data: calculateMA(20, data1),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        }, {
+            name: 'MA30',
+            type: 'line',
+            data: calculateMA(30, data1),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        },{
+            name: 'VOL',
+            type: 'bar',
+            xAxisIndex: 1,
+            yAxisIndex: 1,
+            data: data1.vols,
+            itemStyle: {
+                normal: {
+                    color: function(params) {
+                        var colorList;
+                        if (params.data >= 0) {
+                            colorList = '#ABABAB'
+                        } else {
+                            colorList = '#14b143';
+                        }
+                        return colorList
+                    },
+					opacity: 0.5
+                }
+            }
+        }, 
+    ]
+};

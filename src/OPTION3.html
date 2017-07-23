@@ -1,0 +1,64 @@
+var days = DAYS;
+var concepts = CONCEPTS;
+
+var data = DATA;
+
+data = data.map(function(item) {
+    return [item[1], item[0], item[2] || '-', item[3]];
+});
+
+option = {
+	title:{
+        show:true,
+        left:'center',
+        text:TITLE
+    },
+    tooltip: {
+        position: 'top',
+        formatter: function(info) {
+            var value = info.value;
+            console.log(value);
+            var res = value[3];
+
+            return res
+        }
+    },
+    animation: false,
+    grid: {
+        height: '50%',
+        y: '10%'
+    },
+    xAxis: {
+        type: 'category',
+        data: days
+    },
+    yAxis: {
+        type: 'category',
+        data: concepts
+    },
+    visualMap: {
+        min: 1,
+        max: 10,
+        calculable: true,
+        orient: 'horizontal',
+        dimension:2,
+        left: 'center',
+        bottom: '15%'
+    },
+    series: [{
+        name: 'Punch Card',
+        type: 'heatmap',
+        data: data,
+        label: {
+            normal: {
+                show: true
+            }
+        },
+        itemStyle: {
+            emphasis: {
+                shadowBlur: 10,
+                shadowColor: 'rgba(0, 0, 0, 0.5)'
+            }
+        }
+    }]
+};

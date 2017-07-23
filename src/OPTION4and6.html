@@ -1,0 +1,299 @@
+
+
+function splitData(rawData) {
+    var categoryData = [];
+    var values = [];
+    var macds = [];
+    var difs = [];
+    var deas = [];
+    var vols = [];
+    for (var i = 0; i < rawData.length; i++) {
+        categoryData.push(rawData[i].splice(0, 1)[0]);
+        values.push(rawData[i])
+        vols.push(rawData[i][7]);
+    }
+    return {
+        categoryData: categoryData,
+        values: values,
+        vols: vols
+    };
+}
+
+function calculateMA(dayCount) {
+    var result = [];
+    for (var i = 0, len = data0.values.length; i < len; i++) {
+        if (i < dayCount) {
+            result.push('-');
+            continue;
+        }
+        var sum = 0;
+        for (var j = 0; j < dayCount; j++) {
+            sum += data0.values[i - j][1];
+        }
+        result.push(sum / dayCount);
+    }
+    return result;
+}
+
+// K line data
+var data0 = splitData(STOCK_DATA);
+// K line title
+var stock_name = 'STOCK_NAME'
+
+//['巴西','印尼','美国','印度','中国','世界人口(万)']
+var common_y_data = COMMON_Y_DATA;
+
+var bar_name = 'BAR_NAME';
+var legend_name = LEGEND_NAME;
+
+// SERIES_DATA 
+// 样例为如下，和OPTION6相比，没有[]
+//        {
+//            name: 'data1_name',
+//            type: 'bar',
+//            data: bar_data1		//[18203, 23489, 29034, 104970, 131744, 630230]
+//        },
+//        {
+//            name: '2012年',
+//            type: 'bar',
+//            data: bar_data2
+//        }
+
+
+option = {
+    title: [{
+        text: stock_name,
+        left: '30%'
+    },{
+		text: bar_name,
+		right:'40%'
+	}
+	],
+    dataZoom: [{
+        type: 'inside',
+        start: 100,
+        end: 80
+    }, {
+        show: true,
+        type: 'slider',
+        y: '90%',
+        start: 50,
+        end: 100
+    }, {
+        show: false,
+        xAxisIndex: [0, 1],
+        type: 'slider',
+        start: 20,
+        end: 100
+    }],
+	//change
+    tooltip :{
+				trigger: 'axis',
+				show:true,
+				axisPointer:{
+					show: false,
+					type : 'cross',
+					lineStyle: {
+						type : 'dashed',
+						width : 1
+					}
+				},
+				// change
+				formatter : function (params) {
+					if(params.length == 6) {
+					params = params[0]
+					var date = [
+						'C:' + params.data[5] + '<br/>',
+						'H:' + params.data[6] + '<br/>',
+						'L:' + params.data[7] + '<br/>',
+						//'ratio:' + params.data[3] + '<br/>'
+					].join('')
+					return date
+					}else {
+						return ''
+					}
+				}
+	},
+	// change
+	axisPointer: {
+		link: {xAxisIndex: [0,1]},
+		label: {
+			show:false,
+			backgroundColor: '#777'
+		}
+	},
+	// define position
+    grid: [
+	// K line main chart
+	{
+        left: '5%',
+        top: '10%',
+        height: '75%',
+		width:'40%'
+    }, 
+	// K line vol chart
+	{
+        left: '5%',
+        right: '10%',
+        top: '75%',
+        height: '10%',
+		width:'40%'
+    },
+	// Bar line chart
+	{
+		left: '50%',
+        right: '5%',
+        bottom: '3%',
+        containLabel: true
+	}],
+	//color: ['#0d6457', '#15a08b', '#23c2aa','#73d8c9',  '#9cece0','#FF4500'],
+	color: ['#0d6457', '#15a08b', '#23c2aa','#73d8c9',  '#1E90FF','#FF4500'],
+    xAxis: [		
+	// K line main chart
+	{	
+		gridIndex: 0, 
+		type: 'category',
+		data: data0.categoryData,
+		scale: true,
+		axisLine: {
+			onZero: false
+		},
+		splitLine: {
+			show: false
+		},
+		splitNumber: 20
+	},
+	// K line vol
+	{
+		gridIndex: 1,
+		type: 'category',
+		data: data0.categoryData,
+		axisLabel: {
+			show: false
+		},
+	},
+	// Bar line 
+	{
+		gridIndex: 2,
+		type: 'value',
+		boundaryGap: [0, 0.01]
+	}],
+    yAxis: [
+	    // K line main chart
+		{
+			gridIndex: 0, 
+			scale: true,
+			splitArea: {
+				show: true
+			},
+			position: 'left'
+		}, 
+		// K line vol
+		{
+			gridIndex: 1,
+			axisLine: {
+				onZero: false
+			},
+			axisTick: {
+				show: false
+			},
+			splitLine: {
+				show: false
+			},
+			axisLabel: {
+				show: false
+			},
+			position: 'right'
+		},
+		// Bar line 
+		{
+			gridIndex: 2,
+			type: 'category',
+			data: common_y_data
+		}
+    ],
+	legend : {
+		data : legend_name,
+		right: '15%'
+	},
+    series: [
+        {
+            name: 'AAA',
+            type: 'candlestick',
+            data: data0.values,
+            markPoint: {
+                data: [{
+                    name: 'XX??'
+                }]
+            },
+            markLine: {
+                silent: true,
+                data: [{
+                    yAxis: 2222,
+                }]
+            }
+        }, {
+            name: 'MA5',
+            type: 'line',
+            data: calculateMA(5),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        }, {
+            name: 'MA10',
+            type: 'line',
+            data: calculateMA(10),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        }, {
+            name: 'MA20',
+            type: 'line',
+            data: calculateMA(20),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        }, {
+            name: 'MA30',
+            type: 'line',
+            data: calculateMA(30),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        },{
+            name: 'VOL',
+            type: 'bar',
+            xAxisIndex: 1,
+            yAxisIndex: 1,
+            data: data0.vols,
+            itemStyle: {
+                normal: {
+                    color: function(params) {
+                        var colorList;
+                        if (params.data >= 0) {
+                            colorList = '#ABABAB'
+                        } else {
+                            colorList = '#14b143';
+                        }
+                        return colorList
+                    },
+					opacity: 0.5
+                }
+            }
+        }, 
+		// distribution chart series
+		SERIES_DATA
+    ]
+};

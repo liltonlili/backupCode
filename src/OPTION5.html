@@ -1,0 +1,91 @@
+var size1 = SIZE1;
+var size2 = SIZE2;
+var option = {
+					title : {
+						text : 'TITLE_TEXT',
+					},
+					tooltip : {
+						trigger: 'axis',
+						showDelay : 0,
+						formatter : function (params) {
+							var date = new Date(params.value[0]);
+							data = date.getFullYear() + '-'
+								   + (date.getMonth() + 1) + '-'
+								   + date.getDate();
+							return data + '<br/>'
+								   + params.value[1] + ', ' 
+								   + params.value[2] + ', '
+								   + params.value[3];
+						},
+						axisPointer:{
+							show: true,
+							type : 'cross',
+							lineStyle: {
+								type : 'dashed',
+								width : 1
+							}
+						}
+					},
+					color: ['#9cece0', '#FF4500','#73d8c9', '#23c2aa', '#15a08b', '#0d6457'],
+					toolbox: {
+						show : true,
+						feature : {
+							mark : {show: true},
+							dataView : {show: true, readOnly: false},
+							restore : {show: true},
+							saveAsImage : {show: true}
+						}
+					},
+					dataZoom: [{
+						bottom: 40,
+						fillerColor: 'rgba(126, 224, 209, 0.2)',
+						borderColor: 'rgba(126, 224, 209, 0.75)',
+						handleStyle: {
+							color: '#23c2aa'
+						}
+					}, {
+						left: 20,
+						yAxisIndex: 0,
+						fillerColor: 'rgba(126, 224, 209, 0.2)',
+						borderColor: 'rgba(126, 224, 209, 0.75)',
+						handleStyle: {
+							color: '#23c2aa'
+						}
+					}],
+					legend : {
+						data : ['DATA1_NAME', 'DATA2_NAME']
+					},
+					xAxis : [
+						{
+							type : 'time',
+							name : 'X_NAME'
+						}
+					],
+					yAxis : [
+						{
+							type : 'value',
+							name : 'Y_NAME'
+						}
+					],
+					series : [
+						{
+							name: 'DATA1_NAME',
+							type: 'scatter',
+							showAllSymbol: true,
+							symbolSize: function (value){
+								return Math.round(value[2]*size1) + 2;
+							},
+							data:DATA1
+						},
+						{
+							name: 'DATA2_NAME',
+							type: 'scatter',
+							showAllSymbol: true,
+							symbolSize: function (value){
+								return Math.round(value[2]*size1) + 2;
+							},
+							data:DATA2
+							
+						}
+					]
+				};

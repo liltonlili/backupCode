@@ -1,0 +1,26 @@
+type1_html.html: 一个html包括两个图，一个是回封数VS开板数，回封数用DATA1表示，开板数用DATA2表示；另一个是连板数，包括直接连板DATA3和dummy连板DATA4，
+DATA格式为：[["2016-01-01", 32, 3], ["2016-09-28", 23, 5]]
+
+OPTION2.html: 上证指数， line， 分时的封板数，scatter，分时的封板（开）数， scatter
+
+OPTION3.html: 热力图，显示各个概念在连续天上的封板、开板情况， data格式为：
+
+var days = ['12a', '1a'];
+var concepts= ['Saturday', 'Friday'];
+
+var data = [
+    [0, 0, 5, '金科股份'],
+    [0, 1, 1, 'bbb'],
+    [1, 0, 7, 'ccc'],
+    [1, 1, 4, 'ddd']
+];
+
+
+OPTION4.html: k线图的html
+
+OPTION5.htmL: 散点图
+
+OPTION4and5.html: 结合两个的html
+
+OPTION6: 横向条形图
+OPTION7：纵向条形图

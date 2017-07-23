@@ -1,0 +1,233 @@
+//数据模型 time0 open1 close2 min3 max4 vol5 tag6 macd7 dif8 dea9
+//['2015-10-19',18.56,18.25,18.19,18.56,55.00,0,-0.00,0.08,0.09] 
+//var data0 = splitData([
+//["2017-03-10", 10.72, 10.81, 10.65, 10.93, 13087839.0]
+//]);
+
+var data0 = splitData(STOCK_DATA);
+
+function splitData(rawData) {
+    var categoryData = [];
+    var values = [];
+    var macds = [];
+    var difs = [];
+    var deas = [];
+    var vols = [];
+    for (var i = 0; i < rawData.length; i++) {
+        categoryData.push(rawData[i].splice(0, 1)[0]);
+        values.push(rawData[i])
+        vols.push(rawData[i][7]);
+    }
+    return {
+        categoryData: categoryData,
+        values: values,
+        vols: vols
+    };
+}
+
+function calculateMA(dayCount) {
+    var result = [];
+    for (var i = 0, len = data0.values.length; i < len; i++) {
+        if (i < dayCount) {
+            result.push('-');
+            continue;
+        }
+        var sum = 0;
+        for (var j = 0; j < dayCount; j++) {
+            sum += data0.values[i - j][1];
+        }
+        result.push(sum / dayCount);
+    }
+    return result;
+}
+
+
+
+option = {
+	title: {
+        text: 'STOCK_NAME',
+        left: '30%'
+    },
+    tooltip : {
+				trigger: 'axis',
+				show:true,
+				axisPointer:{
+					show: false,
+					type : 'cross',
+					lineStyle: {
+						type : 'dashed',
+						width : 1
+					}
+				},
+				// change
+				formatter : function (params) {
+					params = params[0]
+					var date = [
+						'C:' + params.data[5] + '<br/>',
+						'H:' + params.data[6] + '<br/>',
+						'L:' + params.data[7] + '<br/>',
+						//'ratio:' + params.data[3] + '<br/>'
+					].join('')
+					return date
+				}
+	},
+    grid: [{
+        left: '5%',
+        top: '10%',
+        height: '75%',
+		width:'40%'
+    }, {
+        left: '5%',
+        right: '10%',
+        top: '75%',
+        height: '10%',
+		width:'40%'
+    }],
+	//color: ['#0d6457', '#15a08b', '#23c2aa','#73d8c9',  '#9cece0','#FF4500'],
+	color: ['#0d6457', '#15a08b', '#23c2aa','#73d8c9',  '#1E90FF','#FF4500'],
+    xAxis: [		// K line main chart
+        {	
+			gridIndex: 0, 
+			type: 'category',
+			data: data0.categoryData,
+			scale: true,
+			axisLine: {
+				onZero: false
+			},
+			splitLine: {
+				show: false
+			},
+			splitNumber: 20
+		},
+		// K line vol
+        {
+			gridIndex: 1,
+			type: 'category',
+			data: data0.categoryData,
+			axisLabel: {
+				show: false
+			},
+		}],
+    yAxis: [{
+        scale: true,
+        splitArea: {
+            show: true
+        },
+        axisLine: {
+            lineStyle: {
+                color: 'red',
+            }
+        },
+        position: 'left'
+    }, {
+        gridIndex: 1,
+        splitNumber: 3,
+        axisLine: {
+            onZero: false
+        },
+        axisTick: {
+            show: false
+        },
+        splitLine: {
+            show: false
+        },
+        axisLabel: {
+            show: false
+        },
+        position: 'right'
+    }],
+    dataZoom: [{
+        type: 'inside',
+        start: 100,
+        end: 80
+    }, {
+        show: true,
+        type: 'slider',
+        y: '90%',
+        start: 50,
+        end: 100
+    }, {
+        show: false,
+        xAxisIndex: [0, 1],
+        type: 'slider',
+        start: 20,
+        end: 100
+    }],
+    series: [{
+            name: 'AAA',
+            type: 'candlestick',
+            data: data0.values,
+            markPoint: {
+                data: [{
+                    name: 'XX标点'
+                }]
+            },
+            markLine: {
+                silent: true,
+                data: [{
+                    yAxis: 2222,
+                }]
+            }
+        }, {
+            name: 'MA5',
+            type: 'line',
+            data: calculateMA(5),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        }, {
+            name: 'MA10',
+            type: 'line',
+            data: calculateMA(10),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        }, {
+            name: 'MA20',
+            type: 'line',
+            data: calculateMA(20),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        }, {
+            name: 'MA30',
+            type: 'line',
+            data: calculateMA(30),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        }, {
+            name: 'VOL',
+            type: 'bar',
+            xAxisIndex: 1,
+            yAxisIndex: 1,
+            data: data0.vols,
+            itemStyle: {
+                normal: {
+                    color: function(params) {
+                        var colorList;
+                        if (params.data >= 0) {
+                            colorList = '#ef232a';
+                        } else {
+                            colorList = '#14b143';
+                        }
+                        return colorList;
+                    },
+                }
+            }
+        }
+
+    ]
+};

@@ -1,0 +1,273 @@
+var data0 = splitData(STOCK_DATA);
+var concept_x_name = 'CONCEPT_X_NAME';
+var concept_data1_name = 'DATA1_NAME';
+var concept_data2_name = 'DATA2_NAME';
+var concept_data1 = DATA1;
+var concept_data2 = DATA2;
+var size1 = SIZE1;
+var size2 = SIZE2;
+var total_title = 'TOTAL_TITLE';
+
+function splitData(rawData) {
+    var categoryData = [];
+    var values = [];
+    var macds = [];
+    var difs = [];
+    var deas = [];
+    var vols = [];
+    for (var i = 0; i < rawData.length; i++) {
+        categoryData.push(rawData[i].splice(0, 1)[0]);
+        values.push(rawData[i])
+        vols.push(rawData[i][4]);
+    }
+    return {
+        categoryData: categoryData,
+        values: values,
+        vols: vols
+    };
+}
+
+function calculateMA(dayCount) {
+    var result = [];
+    for (var i = 0, len = data0.values.length; i < len; i++) {
+        if (i < dayCount) {
+            result.push('-');
+            continue;
+        }
+        var sum = 0;
+        for (var j = 0; j < dayCount; j++) {
+            sum += data0.values[i - j][1];
+        }
+        result.push(sum / dayCount);
+    }
+    return result;
+}
+
+
+
+option = {
+    title: {
+        text: total_title,
+        x: 'center',
+        y: 0
+    },
+    dataZoom: [
+            {
+                id: 'dataZoomX',
+                type: 'slider',
+                xAxisIndex: [0, 1, 2],
+                filterMode: 'filter',
+                start: 0,
+                end: 100,
+                zoomLock: false,
+            }, {
+                type: 'inside',
+            },
+        ],
+    tooltip : {
+        trigger: 'axis',
+        axisPointer: {
+            animation: false,
+        },
+    },
+	// define position
+    grid: [
+		// K line main chart
+        {
+			left: '10%',
+			top: '2%',
+			height: '45%'
+		}, 
+		// K line vol chart
+		{
+			left: '10%',
+			right: '10%',
+			top: '55%',
+			height: '3%'
+		},
+		{
+			left: '10%',
+			top: '60%',
+			height : '30%'
+		}
+    ],
+    xAxis: [
+		// K line main chart
+        {	
+			gridIndex: 0, 
+			type: 'category',
+			data: data0.categoryData,
+			scale: true,
+			boundaryGap: false,
+			axisLine: {
+				onZero: false,
+				lineStyle: {
+					color: 'red',
+				}
+			},
+			splitLine: {
+				show: false
+			},
+			splitNumber: 20
+		},
+		// K line vol
+        {
+			gridIndex: 1,
+			type: 'category',
+			gridIndex: 1,
+			data: data0.categoryData,
+			axisLabel: {
+				show: false
+			},
+		},
+		// concept distribution
+		{
+			gridIndex: 2,
+			type : 'time',
+			name : concept_x_name
+		}
+    ],
+    yAxis: [
+	    // K line main chart
+		{
+			gridIndex: 0, 
+			scale: true,
+			splitArea: {
+				show: true
+			},
+			axisLine: {
+				lineStyle: {
+					color: 'red',
+				}
+			},
+			position: 'right'
+		}, 
+		// K line vol
+		{
+			gridIndex: 1,
+			splitNumber: 3,
+			axisLine: {
+				onZero: false
+			},
+			axisTick: {
+				show: false
+			},
+			splitLine: {
+				show: false
+			},
+			axisLabel: {
+				show: true
+			},
+			axisLine: {
+
+				lineStyle: {
+					color: 'red'
+
+				}
+			},
+			position: 'right'
+		},
+		// conception distribution
+		{
+			gridIndex: 2,
+			type : 'value'
+		}
+    ],
+    series: [
+        {
+            name: '555',
+            type: 'candlestick',
+            data: data0.values,
+            markPoint: {
+                data: [{
+                    name: 'XX标点'
+                }]
+            },
+            markLine: {
+                silent: true,
+                data: [{
+                    yAxis: 2222,
+                }]
+            }
+        }, {
+            name: 'MA5',
+            type: 'line',
+            data: calculateMA(5),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        }, {
+            name: 'MA10',
+            type: 'line',
+            data: calculateMA(10),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        }, {
+            name: 'MA20',
+            type: 'line',
+            data: calculateMA(20),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        }, {
+            name: 'MA30',
+            type: 'line',
+            data: calculateMA(30),
+            smooth: true,
+            lineStyle: {
+                normal: {
+                    opacity: 0.5
+                }
+            }
+        },{
+            name: 'VOL',
+            type: 'bar',
+            xAxisIndex: 1,
+            yAxisIndex: 1,
+            data: data0.vols,
+            itemStyle: {
+                normal: {
+                    color: function(params) {
+                        var colorList;
+                        if (params.data >= 0) {
+                            colorList = '#ef232a'
+                        } else {
+                            colorList = '#14b143';
+                        }
+                        return colorList
+                    },
+                }
+            }
+        }, 
+		// distribution chart series
+		{
+			name: concept_data1_name,
+			type: 'scatter',
+			showAllSymbol: true,
+			symbolSize: function (value){
+				return Math.round(value[2]*size1) + 2;
+			},
+			data:concept_data1
+		},
+		{
+			name: concept_data2_name,
+			type: 'scatter',
+			showAllSymbol: true,
+			symbolSize: function (value){
+				return Math.round(value[2]*size1) + 2;
+			},
+			data:concept_data2
+			
+		}
+    ]
+};
