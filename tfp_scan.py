@@ -19,6 +19,7 @@ class TFP_Crawler:
         mongourl = "localhost"
         self.mongodb = pymongo.MongoClient(mongourl)
         self.date = datetime.datetime.today().strftime("%Y-%m-%d")  # 当前日期
+        # self.date = '2017-05-19'
         self.dayRange = 3   # 3天之内的复牌
 
     def crawl(self):

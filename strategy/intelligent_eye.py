@@ -150,7 +150,17 @@ class IntelliGentEye:
             dframe = dframe[dframe.len_status > 0]
             for j in range(0, len(concepts)):
                 concept = concepts[j]
-                cframe = dframe[dframe.group == concept]
+
+                # 相近的名称
+                if concept in common.close_concept_dict.keys():
+                    concept_near_list = common.close_concept_dict[concept]
+                elif concept in common.close_concept_value_dict.keys():
+                    real_concept = common.close_concept_value_dict[concept]
+                    concept_near_list = common.close_concept_dict[real_concept]
+                else:
+                    concept_near_list = [concept]
+
+                cframe = dframe[dframe.group.isin(concept_near_list)]
                 for k in range(0, len(character_list)):
                     tmp_frame = cframe[cframe.type == character_list[k]]
                     stock_name = list(set(list(np.unique(tmp_frame.name.values))))
@@ -185,7 +195,7 @@ if __name__ == "__main__":
     global mongodb
     mongodb = pymongo.MongoClient("localhost")
     today = dt.datetime.today().strftime("%Y%m%d")
-
+    # today = "20170526"
     # today = "20170314"
 
     htmler = IntelliGentEye(day=today)
@@ -211,6 +221,6 @@ if __name__ == "__main__":
     print 'generate L1 csv finished, output dir:%s' %save_dir
 
     # 生成.bat文件用来更新L1
-    with open(os.path.join(save_dir, u"2是否提高.bat"), 'wb') as fHandler:
+    with open(os.path.join(save_dir, u"2回到零原点.bat"), 'wb') as fHandler:
         fHandler.write(ur"@start cmd /k python D:\Money\lilton_code\Market_Mode\rocketup\strategy\manage_cache_L1.py")
     common.showinfos(u'请review L1.csv')

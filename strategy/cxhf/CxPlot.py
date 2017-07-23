@@ -10,12 +10,12 @@ import datetime as dt
 import time
 import sys,os
 import pymongo
-sys.path.append("../")
+sys.path.append("D:/Money/lilton_code/Market_Mode/rocketup")
 import common
 
 # 每日的开板数，回封数（在回封积累数的基础上）
 def plot_back_open_num(ax, markersize=8):
-    global results, htmlType1
+    global results, html1
     count = 0
 
     # 回封数，同html格式一致，[["2016-01-01", 回封连板数，符合条件的股票数(相同回封数), 股票代码字符串], ["2016-09-28", 回封连板数，符合条件的股票数, 股票代码字符串], ...]
@@ -245,19 +245,25 @@ def plot_back_open_num(ax, markersize=8):
     str_first_fail = str(first_back_fail_list).replace('"', '').replace("'", '"')
     str_second_fail = str(second_back_fail_list).replace('"', '').replace("'", '"')
     size1 = size2 = size3 = "5"
-    type1html = htmlType1.replace("DATA1", str_back).replace("DATA2", str_open).replace("DATA3", str_yesback_ratio).replace("DATA4", str_4).replace("SIZE1", size1).replace("SIZE2", size2).replace(' u"', ' "')
-    type1html = type1html.replace("DATA5", str_first_fail).replace("DATA6", str_second_fail).replace(' u"', ' "').replace("SIZE3", size3)
-    with open(os.path.join(u"D:/Money/modeResee/复盘/次新", "TypeA.html"), 'wb') as fHanlder:
-        fHanlder.write(type1html)
+    html_1 = html1.replace("DATA1", str_back).replace("DATA2", str_open).replace("DATA3", str_yesback_ratio).replace("DATA4", str_4).replace("SIZE1", size1).replace("SIZE2", size2).replace(' u"', ' "')
+    html_1 = html_1.replace("DATA5", str_first_fail).replace("DATA6", str_second_fail).replace(' u"', ' "').replace("SIZE3", size3)
+    with open(os.path.join(u"D:/Money/modeResee/复盘/次新", u"复盘.html"), 'wb') as fHanlder:
+        fHanlder.write(html_1)
 
 def main(start_day = "20160108", end_day = dt.datetime.today().strftime("%Y%m%d")):
     print "Will run CxPlot, start_day = %s, end_day = %s"%(start_day, end_day)
     global mongodb, results, markers
     markers = {0:".", 1:"o", 2:"<", 3:"^", 4:"h", 5:"*"}
-    global htmlType1
-    with open(os.path.join("D:/Money/lilton_code/Market_Mode/rocketup/src","type1_html.html"), 'rb') as fHanlder:
-        htmlType1 = fHanlder.read()
+    global html1
+    with open(os.path.join("D:/Money/lilton_code/Market_Mode/rocketup/src","OPTION_1.html"), 'rb') as fHanlder:
+        html1 = fHanlder.read()
     mongodb = pymongo.MongoClient("localhost")
+    # while 1:
+    #     test_result = mongodb.stock.ZDT_by_date.find({"date": end_day})[0]
+    #     if 'backTen_acc' not in test_result.keys():
+    #         time.sleep(60)
+    #     else:
+    #         break
     results = mongodb.stock.ZDT_by_date.find({"date":{"$gte":start_day, "$lte":end_day}})
     figure = plt.figure(figsize=(18, 8))
     # 回封数，开板数

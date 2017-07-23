@@ -23,11 +23,19 @@ def get_page(content):
         print ("can't extrace page")
     return int(tpage)
 
+# data = {
+#     'pwdlevel' : 'Y',
+#     'loginType' : 1,
+#     'userName' : 'liltonlili',
+#     'pwd' : 'taoguba890928',
+#     'save' : 'Y'
+# }
+
 data = {
     'pwdlevel' : 'Y',
     'loginType' : 1,
-    'userName' : 'liltonlili',
-    'pwd' : 'taoguba890928',
+    'userName' : 'youshuaiji',
+    'pwd' : 'ucag4414',
     'save' : 'Y'
 }
 
@@ -53,7 +61,7 @@ headers = {
     "Host":"www.taoguba.com.cn",
     "Origin":"https://www.taoguba.com.cn",
     "Referer":"https://www.taoguba.com.cn/gotoLogin",
-    "Upgrade-Insecure-Requests":1,
+    "Upgrade-Insecure-Requests":"1",
     "User-Agent":"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36"
 }
 
@@ -108,7 +116,7 @@ def get_detailed_content(href):
                 r = s.get(href,headers = general_headers)
                 if r.status_code == 200:
                     break
-                tt.sleep(10)
+                tt.sleep(2)
             except:
                 pass
             finally:
@@ -228,7 +236,7 @@ def get_detailed_content(href):
                 docHandler.add_paragraph(textContent.decode("utf8"))
             except:
                 docHandler.add_paragraph(textContent.decode("gbk"))
-        tt.sleep(8)
+        tt.sleep(1)
     except:
         docHandler.add_paragraph(href)
         txtHandler.write(href)
@@ -244,78 +252,98 @@ if __name__ == "__main__":
 
 
 
-    ID = '157548' #
-    logdir = os.path.join(u"D:/Money/lilton_code/Market_Mode/learnModule/logs/%s"%ID,"")
-    mydir = u'D:/Money/lilton_code/Market_Mode/learnModule/%s'%ID
-    if not os.path.exists(logdir):
-        os.makedirs(logdir)
-    logging.config.fileConfig("./conf/conf_log.txt", defaults={'logdir': logdir})
-    logging.getLogger().info("report main startup")
-    logging.getLogger().info(ID)
+    IDs = [ '24388'] #
+    names = {
+        # "494469": u'令胡冲',
+        # "206476": u'瑞鹤仙',
+        # "103830": u'龙飞虎',
+        # "134434": u'炒股养家',
+        # "6630": u'好运2008',
+        "157389": u'心如止',
+        '1589957': u'孤独牛背',
+        "326": u'尘浪',
+        "252667": u'雷立刚',
+        '1556': u'最善一手',
+        "186755": u'我是小北路',
+        '380462': u'暗黑星星之火',
+        '4223': u'职业炒手',
+        "24388": u'asking',
+        "591447": u'著名刺客',
+        "410361": u'榜中榜',
+        "464623": u'乔帮主',
+    }
+    for ID in IDs:
+        logdir = os.path.join(u"D:/Money/lilton_code/Market_Mode/learnModule/logs/%s"%ID,"")
+        mydir = u'D:/Money/lilton_code/Market_Mode/learnModule/%s'%names[ID]
+        if not os.path.exists(logdir):
+            os.makedirs(logdir)
+        logging.config.fileConfig("./conf/conf_log.txt", defaults={'logdir': logdir})
+        logging.getLogger().info("report main startup")
+        logging.getLogger().info(ID)
 
-    if os.path.exists(os.path.join(mydir, "pic")):
-        pass
-    else:
-        os.makedirs(os.path.join(mydir, "pic"))
-    global txtHandler
-    txtHandler = open(os.path.join(mydir,"record.txt"),'w')
-    docHandler = Document()
+        if os.path.exists(os.path.join(mydir, "pic")):
+            pass
+        else:
+            os.makedirs(os.path.join(mydir, "pic"))
+        global txtHandler
+        txtHandler = open(os.path.join(mydir,"record.txt"),'w')
+        docHandler = Document()
 
-    s = requests.Session()
-    # login_url = 'http://www.taoguba.com.cn/newLogin'
-    login_url = 'https://www.taoguba.com.cn/newLogin'
-    pic_count = 0
-    r = s.post(url=login_url, headers=headers, data=data, allow_redirects=True)
+        s = requests.Session()
+        # login_url = 'http://www.taoguba.com.cn/newLogin'
+        login_url = 'https://www.taoguba.com.cn/newLogin'
+        pic_count = 0
+        r = s.post(url=login_url, headers=headers, data=data, allow_redirects=True)
 
 
-    index_url = 'http://www.taoguba.com.cn/index'
-    r = s.get(index_url,headers = general_headers )
-    user_url = 'http://www.taoguba.com.cn/moreReply?userID=%s'%ID
+        index_url = 'http://www.taoguba.com.cn/index'
+        r = s.get(index_url,headers = general_headers )
+        user_url = 'http://www.taoguba.com.cn/moreReply?userID=%s'%ID
 
-    #主页
-    r1 = s.get(user_url,headers = general_headers )
-    tpages = int(get_page(r1.content.decode("utf8")))
-    # hrefs = extract_hrefs(r1.content.decode("utf8"))
-    #得到每个回复的href之后，进行detail的解析
-    # for href in hrefs:
-    #     href = "http://www.taoguba.com.cn/" + href
-    #     get_detailed_content(href)
-    try:
-        for page in range(tpages,0,-1):
-            logging.getLogger().info("page:%s" %page)
-            url = 'http://www.taoguba.com.cn/moreReply?pageNum=%s&pageNo=%s&userID=%s' %(tpages, page, ID)
-            logging.getLogger().info("url:%s" %url)
-            page_count = 20
-            status = False
-            try:
-                while page_count > 0:
-                    try:
-                        r_tmp = s.get(url,headers = general_headers )
-                        if r_tmp.status_code == 200:
-                            status = True
-                            break
-                    except:
-                        pass
-                    tt.sleep(10)
-                    page_count -= 1
-                if not status:
-                    logging.getLogger().error("page %s failed, will skip" %page)
-                    continue
-                hrefs = extract_hrefs(r_tmp.content.decode("utf8"))
-                #得到每个回复的href之后，进行detail的解析
-                for href in hrefs:
-                    # #debug
-                    # href = "http://www.taoguba.com.cn/Reply/1149649/17971214#17971214"
-                    href = "http://www.taoguba.com.cn/" + href
-                    get_detailed_content(href)
-                    # break
-            except Exception, err:
-                logging.getLogger().error("Encount err when handle page:%s, err:%s" %(page, err))
-                print "fail at page:%s" %page
-            # break
-    except:
-        logging.getLogger().exception("Unexpected err:%s"%err)
-        # pass
-    finally:
-        txtHandler.close()
-        docHandler.save(os.path.join(mydir,"%s.docx"%ID))
+        #主页
+        r1 = s.get(user_url,headers = general_headers )
+        tpages = int(get_page(r1.content.decode("utf8")))
+        # hrefs = extract_hrefs(r1.content.decode("utf8"))
+        #得到每个回复的href之后，进行detail的解析
+        # for href in hrefs:
+        #     href = "http://www.taoguba.com.cn/" + href
+        #     get_detailed_content(href)
+        try:
+            for page in range(tpages,0,-1):
+                logging.getLogger().info("page:%s" %page)
+                url = 'http://www.taoguba.com.cn/moreReply?pageNum=%s&pageNo=%s&userID=%s' %(tpages, page, ID)
+                logging.getLogger().info("url:%s" %url)
+                page_count = 20
+                status = False
+                try:
+                    while page_count > 0:
+                        try:
+                            r_tmp = s.get(url,headers = general_headers )
+                            if r_tmp.status_code == 200:
+                                status = True
+                                break
+                        except:
+                            pass
+                        tt.sleep(3)
+                        page_count -= 1
+                    if not status:
+                        logging.getLogger().error("page %s failed, will skip" %page)
+                        continue
+                    hrefs = extract_hrefs(r_tmp.content.decode("utf8"))
+                    #得到每个回复的href之后，进行detail的解析
+                    for href in hrefs:
+                        # #debug
+                        # href = "http://www.taoguba.com.cn/Reply/1149649/17971214#17971214"
+                        href = "http://www.taoguba.com.cn/" + href
+                        get_detailed_content(href)
+                        # break
+                except Exception, err:
+                    logging.getLogger().error("Encount err when handle page:%s, err:%s" %(page, err))
+                    print "fail at page:%s" %page
+                # break
+        except:
+            logging.getLogger().exception("Unexpected err:%s"%err)
+            # pass
+        finally:
+            txtHandler.close()
+            docHandler.save(os.path.join(mydir,"%s.docx"%ID))

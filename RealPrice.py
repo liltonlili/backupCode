@@ -15,6 +15,7 @@ import redis
 import sys
 sys.path.append("D:/projects/report_download/src/lib")
 import http_downloader
+import common
 
 frame_list=[]
 global redisc
@@ -50,29 +51,18 @@ class RealPrice():
                 # logging.getLogger().exception("Error when do job, err:%s" % err)
                 time.sleep(20)
 
+
+
+
     # 获取股票代码列表
     def initial_stock_list(self):
+        # 清空redis
+        global redisc
+        redisc.flushdb()
         try:
-            dir = 'D:\Money\lilton_code'
-            # if 1:
-            try:
-                while(True):
-                    zs = ts.get_stock_basics()
-                    if len(zs) > 1000:
-                        break
-                    print "Failed to get stock basics, len:%s" %len(zs)
-                    time.sleep(5)
-                zs.to_csv(os.path.join(dir,'stock_list.csv'))
-                stock_list=list(set(zs.index.values))
-            except:
-                zs = pd.read_csv(os.path.join(dir, "stock_list.csv"))
-                # print zs.columns
-                zs.columns = [u'code', u'name', u'industry', u'area', u'pe', u'outstanding',u'totals', u'totalAssets', u'liquidAssets', u'fixedAssets', u'reserved',u'reservedPerShare', u'esp', u'bvps', u'pb', u'timeToMarket', u'undp',
-       u'perundp', u'rev', u'profit', u'gpr', u'npr', u'holders']
-                stock_list=list(set(zs.code.values))
+            stock_list = common.get_stock_list_from_many_site()
             print "initialize stocklist finished!"
 
-            # stock_list=list(set(zs.code.values))
             stock_lists=[]
 
             for code in stock_list:
@@ -162,9 +152,8 @@ class RealPrice():
             low = tmpframe.loc[key,'low']
             rate = tmpframe.loc[key, 'rate']
             key = "0" * (6-len(str(key))) + str(key)
-            # if key == "000002":
+            # if key == "002867":
             #     print close, rate
-            # print key, value
             redisc.set(key, [close, preclose, high, low, rate])
         logging.getLogger().info("update redis finished!")
 

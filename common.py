@@ -8,8 +8,8 @@ import tushare as ts
 import time
 import requests
 import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
+# reload(sys)
+# sys.setdefaultencoding('utf-8')
 import pymongo
 from pandas import DataFrame,Series
 import matplotlib.pyplot as plt
@@ -18,6 +18,7 @@ from tkMessageBox import *
 import Tkinter as tk
 import json
 import shutil
+from lxml import etree
 
 mongourl = "localhost"
 global mongodb, backsee_csv
@@ -33,18 +34,18 @@ backsee_csv = u'D:/Money/modeResee/复盘'
 #     souhudbs='c'
 #     souhudbi='c'
 #     return (mydbs,mydb,dydb,localdb,cardb,souhudbs,souhudbi)
-
+#
 
 # 仅限于在公司
 def connectdb():
     # mydbs='a'
     # mydb='b'
     # dydb='c'
-    # mydbs=mysqldb({'host': 'db-bigdata.wmcloud-qa.com', 'user': 'app_bigdata_ro', 'pw': 'Welcome_20141217', 'db': 'bigdata', 'port': 3312})
-    mydbs = 'a'
+    mydbs=mysqldber({'host': 'db-bigdata-ro.wmcloud.com', 'user': 'app_bigdata_ro', 'pw': 'Welcome_20141217', 'db': 'bigdata', 'port': 3312})
     dydb  = mysqldber({'host': 'db-datayesdb-ro.wmcloud.com', 'user': 'app_gaea_ro', 'pw': 'EQw6WquhnCKPp8Li', 'db': 'datayesdbp', 'port': 3313})
     mydb = mysqldber({'host': '10.21.232.43', 'user': 'app_gaea_ro', 'pw': 'Welcome20150416', 'db': 'MarketDataL1', 'port': 5029})  ##分笔，分钟级
-    cardb = mysqldber({'host': 'db-news.wmcloud-stg.com', 'user': 'app_bigdata_ro', 'pw': 'Welcome_20141217', 'db': 'news', 'port': 3310})
+    # cardb = mysqldber({'host': 'db-news.wmcloud-stg.com', 'user': 'app_bigdata_ro', 'pw': 'Welcome_20141217', 'db': 'news', 'port': 3310})
+    cardb = 'A'
     souhudbs = mysqldber({'host': 'db-datayesdb-ro.wmcloud.com', 'user': 'app_gaea_ro', 'pw': 'EQw6WquhnCKPp8Li', 'db': 'datayesdb', 'port': 3313})
     # souhudbi = mysqldb({'host': 'db-bigdata.wmcloud-qa.com', 'user': 'app_bigdata_ro', 'pw': 'Welcome_20141217', 'db': 'bigdata', 'port': 3312})
     souhudbi = 'a'
@@ -182,9 +183,6 @@ class gm_date:
         self.calList=list(calList)
 
 
-
-
-
 ## 根据起始年月和终止年月，得到日期列表
 ## ["2015/01/01",'2015/01/02",...]
 def getDate(startdate,enddate):
@@ -212,16 +210,18 @@ def get_day_k_status(stockid, date):
         return change_rate, close_zt_status, close_dt_status, high_zt_status, low_dt_status
     except:
         return None, None, None, None, None
+
+
 ## 输入格式不限
 ## 根据股票代码和日期获取交易数据
 ## 如果stock_list长度为0，则选出所有股票
 ## 输出dataFrame格式为：
 
-#      TICKER_SYMBOL SEC_SHORT_NAME  TRADE_DATE  PRE_CLOSE_PRICE  OPEN_PRICE    HIGHEST_PRICE   LOWEST_PRICE  CLOSE_PRICE
+#      TICKER_SYMBOL SEC_SHORT_NAME  TRADE_DATE  PRE_CLOSE_PRICE  OPEN_PRICE    HIGHEST_PRICE   LOWEST_PRICE  CLOSE_PRICE ACT_PRE_CLOSE_PRICE TURNOVER_VOL
 # 0           000033          *ST新都  2016-04-27            10.38        0.00           0.00          0.00        10.38
 # 1           600710          *ST常林  2016-04-27             9.36        0.00         10.61         10.52        10.57
-
-def get_mysqlData(stock_list,date_list):
+# 一般情况用vmkt_equd（没有考虑复权），但是在判断是否涨停时必须用equd，而在算一段时间的涨跌幅时要用vmkt_equd_adj（复权数据）
+def get_mysqlData(stock_list, date_list, db_table='vmkt_equd'):
     # mysqldb = mysqldata()
     global mysqldb
     stock_list_zs = [x for x in stock_list if u"ZS" in x]   # 指数
@@ -229,15 +229,13 @@ def get_mysqlData(stock_list,date_list):
     stock_list = ['0'*(6-len(str(x)))+str(x) for x in stock_list]
     date_list = [format_date(x,"%Y-%m-%d") for x in date_list]
     date_list = str(date_list).replace("[","(").replace("]",")")
-    # print stock_list
-    # print date_list
 
     dataFrame = DataFrame()
     # 个股
-    table="vmkt_equd"
+    table= db_table
     if len(stock_list) > 0:
         stock_list = str(stock_list).replace("[","(").replace("]",")")
-        query = "SELECT TICKER_SYMBOL, SEC_SHORT_NAME, TRADE_DATE, PRE_CLOSE_PRICE, OPEN_PRICE, HIGHEST_PRICE, LOWEST_PRICE, CLOSE_PRICE, ACT_PRE_CLOSE_PRICE " \
+        query = "SELECT TICKER_SYMBOL, SEC_SHORT_NAME, TRADE_DATE, PRE_CLOSE_PRICE, OPEN_PRICE, HIGHEST_PRICE, LOWEST_PRICE, CLOSE_PRICE, ACT_PRE_CLOSE_PRICE, TURNOVER_VOL " \
                 "from %s where TICKER_SYMBOL in %s and TRADE_DATE in %s"%(table,stock_list, date_list)
         dataFrame = mysqldb.dydb_query(query)
     # else:
@@ -251,15 +249,67 @@ def get_mysqlData(stock_list,date_list):
     table = "vmkt_idxd"
     if len(stock_list_zs) > 0:
         stock_list_zs = str(stock_list_zs).replace("[","(").replace("]",")")
-        query = "SELECT TICKER_SYMBOL, SEC_SHORT_NAME, TRADE_DATE, PRE_CLOSE_INDEX, OPEN_INDEX, HIGHEST_INDEX, LOWEST_INDEX, CLOSE_INDEX " \
+        query = "SELECT TICKER_SYMBOL, SEC_SHORT_NAME, TRADE_DATE, PRE_CLOSE_INDEX, OPEN_INDEX, HIGHEST_INDEX, LOWEST_INDEX, CLOSE_INDEX, TURNOVER_VOL " \
                 "from %s where TICKER_SYMBOL in %s and TRADE_DATE in %s"%(table,stock_list_zs, date_list)
         dataFrame2 = mysqldb.dydb_query(query)
-        dataFrame2.columns = ["TICKER_SYMBOL", "SEC_SHORT_NAME", "TRADE_DATE", "PRE_CLOSE_PRICE", "OPEN_PRICE", "HIGHEST_PRICE", "LOWEST_PRICE", "CLOSE_PRICE"]
+        dataFrame2.columns = ["TICKER_SYMBOL", "SEC_SHORT_NAME", "TRADE_DATE", "PRE_CLOSE_PRICE", "OPEN_PRICE", "HIGHEST_PRICE", "LOWEST_PRICE", "CLOSE_PRICE", "TURNOVER_VOL"]
         dataFrame2['ACT_PRE_CLOSE_PRICE'] = dataFrame2['PRE_CLOSE_PRICE']
         dataFrame = pd.concat([dataFrame, dataFrame2], axis=0)
+
+    # 如果high或者low为0，则需要用close进行填充
+    if len(dataFrame) > 0:
+        dataFrame['OPEN_PRICE'] = dataFrame.apply(fill_sqlframe_na, args=('OPEN_PRICE',), axis=1)
+        dataFrame['HIGHEST_PRICE'] = dataFrame.apply(fill_sqlframe_na, args=('HIGHEST_PRICE',), axis=1)
+        dataFrame['LOWEST_PRICE'] = dataFrame.apply(fill_sqlframe_na, args=('LOWEST_PRICE',), axis=1)
+
+    # for col in ['PRE_CLOSE_PRICE', "OPEN_PRICE", "HIGHEST_PRICE", "LOWEST_PRICE", "CLOSE_PRICE"]:
+    #     dataFrame[col] = dataFrame[col].round(2)
     return dataFrame
 
 
+def fill_sqlframe_na(df, col_name):
+    if df[col_name] == 0:
+        return df['CLOSE_PRICE']
+    else:
+        return df[col_name]
+
+#      TICKER_SYMBOL SEC_SHORT_NAME  TRADE_DATE  PRE_CLOSE_PRICE  OPEN_PRICE    HIGHEST_PRICE   LOWEST_PRICE  CLOSE_PRICE  ACT_PRE_CLOSE_PRICE TURNOVER_VOL rate
+# 0           000033          *ST新都  2016-04-27            10.38        0.00           0.00          0.00        10.38
+# 1           600710          *ST常林  2016-04-27             9.36        0.00         10.61         10.52        10.57
+# 单个股票
+def get_single_ticker_tushare(ticker, start_date, end_date):
+    start_date = format_date(start_date, '%Y-%m-%d')
+    end_date = format_date(end_date, '%Y-%m-%d')
+    x = ts.get_hist_data(ticker,start=start_date,end=end_date)
+    x['PRE_CLOSE_PRICE'] = x['close'] - x['price_change']
+    x.reset_index(inplace=True)
+    x.rename(columns={"date":"TRADE_DATE","open":"OPEN_PRICE", "high":"HIGHEST_PRICE", "low":"LOWEST_PRICE",
+                                   "close":"CLOSE_PRICE","volume":"TURNOVER_VOL", 'p_change':"rate"}, inplace=True)
+    x['ACT_PRE_CLOSE_PRICE'] = x['PRE_CLOSE_PRICE']
+    x['TICKER_SYMBOL'] = ticker
+    x['SEC_SHORT_NAME'] = ts.get_realtime_quotes(ticker).name.values[0]
+    x = x[['TICKER_SYMBOL', 'SEC_SHORT_NAME', 'TRADE_DATE', 'PRE_CLOSE_PRICE', 'OPEN_PRICE', 'HIGHEST_PRICE',
+          'LOWEST_PRICE', 'CLOSE_PRICE', 'ACT_PRE_CLOSE_PRICE', 'TURNOVER_VOL', 'rate']]
+    return x.sort("TRADE_DATE", ascending=True)
+
+## 输入格式不限
+# 承接上面的单个股票，这里是多个股票
+## 根据股票代码和日期获取交易数据
+## 和上面不同的是，stock_list必须有值，而且data_list为交易日的开始日期和结束日期
+## 输出dataFrame格式为：
+
+#      TICKER_SYMBOL SEC_SHORT_NAME  TRADE_DATE  PRE_CLOSE_PRICE  OPEN_PRICE    HIGHEST_PRICE   LOWEST_PRICE  CLOSE_PRICE  ACT_PRE_CLOSE_PRICE TURNOVER_VOL
+# 0           000033          *ST新都  2016-04-27            10.38        0.00           0.00          0.00        10.38
+# 1           600710          *ST常林  2016-04-27             9.36        0.00         10.61         10.52        10.57
+
+def get_mysqlData_tushare(stock_list,start_date, end_date):
+    frame_list = []
+    for ticker in list(set(stock_list)):
+        frame_list.append(get_single_ticker_tushare(ticker, start_date, end_date))
+    tframe = pd.concat(frame_list, axis=0)
+    tframe.reset_index(inplace=True)
+    del tframe['index']
+    return tframe
 
 ## 执行mysql，返回dataframe
 def get_mysqlData_sqlquery(sqlquery):
@@ -368,13 +418,13 @@ def get_lastN_date(date,n):
     del calframe['0']
     calframe.columns=['Time']
     format_str=format_date(date,"%Y/%m/%d")
-    index=calframe[calframe.Time==format_str].index
+    index=calframe[calframe.Time <= format_str].tail(1).index.values[0]
     last_index= index-n
     if last_index > calframe.index.values[-1]:
         last_index = calframe.index.values[-1]
         last_date=str(calframe.loc[last_index,'Time'])
     else:
-        last_date=str(calframe.loc[last_index,:]['Time'].values[0])
+        last_date=str(calframe.loc[last_index,'Time'])
     last_date=datetime.datetime.strptime(last_date,"%Y/%m/%d").strftime("%Y-%m-%d")
     return last_date
 
@@ -393,7 +443,7 @@ def format_date(inDate,formatType):
                 try:
                     formatDate=inDate.strftime(formatType)
                 except:
-                    formatDate="19890928"
+                    formatDate="20000000"
     return formatDate
 
 #     TRADE_DATE    TICKER_SYMBOL  rate       type
@@ -652,7 +702,6 @@ def plotFrame(dataFrame,x='',y=[],titles=[],point=100, marker=False):
     step = len(dataFrame)/point
     baseline = range(len(dataFrame)/step+1)
     baseline = [int(x) * step for x in baseline]
-    print baseline
     fig = plt.figure(figsize=(12,8))
     count = 221
 
@@ -972,12 +1021,12 @@ def set_frameWork_option(options):
     return toption, count
 
 # 根据option的个数，动态调整网页中的图表个数
-def set_frameWork_charts(count):
+def set_frameWork_charts(count, width=1600, height=400):
     inner_base = '''
     var myChart = ec.init(document.getElementById('chartdivNum'));
     myChart.setOption(optionNum);
     '''
-    front_base = '<div id="chartdivNum" style="width:1600px;height:400px"></div>'
+    front_base = '<div id="chartdivNum" style="width:%spx;height:%spx"></div>' % (width, height)
     inner = []
     front = []
     for i in range(1, count):
@@ -1106,6 +1155,124 @@ def curve_option3(dframe, html_src=os.path.join(u"D:/Money/lilton_code/Market_Mo
     return text
 
 
+# dframe 格式为： index row，date，open, close, high, low, volume, code, rate, name(utf-8)编码
+# date格式为"%Y-%m-%d"
+# 据此生成K线图的html
+def curve_option4(dframe, html_src=os.path.join(u"D:/Money/lilton_code/Market_Mode/rocketup/src", "")):
+    data = []
+    for idx in dframe.index.values:
+        data.append([dframe.loc[idx, 'date'], dframe.loc[idx, 'open'],
+                     dframe.loc[idx, 'close'], dframe.loc[idx, 'low'],
+                     dframe.loc[idx, 'high'], dframe.loc[idx, 'rate'],
+                     dframe.loc[idx, 'hrate'], dframe.loc[idx, 'lrate'],
+                      dframe.loc[idx, 'volume']])
+
+    data = list2str(data, delimiter="")
+    with open(os.path.join(html_src, "OPTION4.html"), 'rb') as fHandler:
+        text = fHandler.read()
+        try:
+            text = text.replace("STOCK_DATA", str(data)).replace("STOCK_NAME", dframe.loc[0, 'name'])
+        except:
+            try:
+                text = text.replace("STOCK_DATA", str(data)).replace("STOCK_NAME", dframe.loc[0, 'name'].decode("gbk"))
+            except:
+                try:
+                    text = text.replace("STOCK_DATA", str(data)).replace("STOCK_NAME", dframe.loc[0, 'name'].encode("gbk"))
+                except:
+                    text = text.replace("STOCK_DATA", str(data)).replace("STOCK_NAME", dframe.loc[0, 'name'].decode("utf-8"))
+    return text
+
+
+# dframe 格式为： index row，date，ratio, count, desc, data_flag(将一个dframe拆分成2个dframe，根据标号分别为1, 2)
+# 据此生成散点图
+#
+def curve_option5(dframe, data_name_list=['A', 'B'], title='concept_position', x_name='date', y_name=u'新能源', size1='6', size2='6', html_src=os.path.join(u"D:/Money/lilton_code/Market_Mode/rocketup/src", "")):
+    data1 = []
+    dframe1 = dframe[dframe.data_flag == 1]
+
+    for idx in dframe1.index.values:
+        if 'desc' in dframe1.columns:
+            data1.append([dframe1.loc[idx, 'date'], dframe1.loc[idx, 'ratio'],
+                     dframe1.loc[idx, 'count'], dframe1.loc[idx, 'desc']])
+        else:
+            data1.append([dframe1.loc[idx, 'date'], dframe1.loc[idx, 'ratio'],
+                         dframe1.loc[idx, 'count']])
+    data2 = []
+    dframe2 = dframe[dframe.data_flag == 2]
+    for idx in dframe2.index.values:
+        if 'desc' in dframe1.columns:
+            data2.append([dframe2.loc[idx, 'date'], dframe2.loc[idx, 'ratio'],
+                     dframe2.loc[idx, 'count'], dframe2.loc[idx, 'desc']])
+        else:
+            data2.append([dframe2.loc[idx, 'date'], dframe2.loc[idx, 'ratio'],
+                         dframe2.loc[idx, 'count']])
+
+    data1 = [str(x) for x in data1]
+    data2 = [str(x) for x in data2]
+    data1 = list2str(data1, delimiter="")
+    data2 = list2str(data2, delimiter="")
+
+    with open(os.path.join(html_src, "OPTION5.html"), 'rb') as fHandler:
+        text = fHandler.read()
+        text = text.replace("DATA1_NAME", data_name_list[0]).replace("DATA2_NAME", data_name_list[1]).replace("TITLE_TEXT", title)
+        text = text.replace('DATA1', data1).replace("DATA2", data2).replace("SIZE1", size1).replace("SIZE2", size2)
+        text = text.replace("X_NAME", x_name).replace("CONCEPT_y_NAME", y_name)
+        text = text.replace('"[', '[').replace(']"', ']')
+    return text
+
+
+def curve_option4and5(dframe_list, data_name_list=['A', 'B'], title='concept_position', x_name='date', y_name='ratio%', size1='2', size2='8', html_src = os.path.join(u"D:/Money/lilton_code/Market_Mode/rocketup/src", "")):
+    [dframe4, dframe5] = dframe_list
+    # 先处理dframe4的
+    data4 = []
+    for idx in dframe4.index.values:
+        data4.append([dframe4.loc[idx, 'TRADE_DATE'], dframe4.loc[idx, 'OPEN_PRICE'],
+                     dframe4.loc[idx, 'CLOSE_PRICE'], dframe4.loc[idx, 'LOWEST_PRICE'],
+                     dframe4.loc[idx, 'HIGHEST_PRICE'], dframe4.loc[idx, 'TURNOVER_VOL'],
+                      dframe4.loc[idx, 'rate'], dframe4.loc[idx, 'hrate'],
+                      dframe4.loc[idx, 'lrate']])
+
+    data4 = list2str(data4, delimiter="")
+
+
+    # 再处理dframe5的
+    data1 = []
+    dframe1 = dframe5[dframe5.data_flag == 1]
+
+    for idx in dframe1.index.values:
+        if 'desc' in dframe1.columns:
+            data1.append([dframe1.loc[idx, 'date'], dframe1.loc[idx, 'ratio'],
+                     dframe1.loc[idx, 'count'], dframe1.loc[idx, 'desc']])
+        else:
+            data1.append([dframe1.loc[idx, 'date'], dframe1.loc[idx, 'ratio'],
+                         dframe1.loc[idx, 'count']])
+    data2 = []
+    dframe2 = dframe5[dframe5.data_flag == 2]
+    for idx in dframe2.index.values:
+        if 'desc' in dframe1.columns:
+            data2.append([dframe2.loc[idx, 'date'], dframe2.loc[idx, 'ratio'],
+                     dframe2.loc[idx, 'count'], dframe2.loc[idx, 'desc']])
+        else:
+            data2.append([dframe2.loc[idx, 'date'], dframe2.loc[idx, 'ratio'],
+                         dframe2.loc[idx, 'count']])
+
+    data1 = [str(x) for x in data1]
+    data2 = [str(x) for x in data2]
+    data1 = list2str(data1, delimiter="")
+    data2 = list2str(data2, delimiter="")
+
+
+    with open(os.path.join(html_src, "OPTION4and5.html"), 'rb') as fHandler:
+        # 替换掉OPTION4相关的
+        text = fHandler.read()
+        text = text.replace("STOCK_DATA", str(data4)).replace("STOCK_NAME", dframe4.iloc[0, :]['TICKER_SYMBOL'])
+        # 替换掉OPTION5相关的
+        text = text.replace("DATA1_NAME", data_name_list[0]).replace("DATA2_NAME", data_name_list[1].encode("utf-8")).replace("STOCK_ID", title)
+        text = text.replace('DATA1', data1).replace("DATA2", data2).replace("SIZE1", size1).replace("SIZE2", size2)
+        text = text.replace("X_NAME", x_name).replace("CONCEPT_y_NAME", data_name_list[1])
+        text = text.replace('"[', '[').replace(']"', ']')
+    return text
+
 # LEGEND_REPLACE = ['legendA','legendB']
 # dframe 列必须为： barTime(index), stockid1, Num, Details, oNum, oDetails
 # num为此刻的涨停数, details为对应的涨停股票s
@@ -1138,6 +1305,133 @@ def curve_option2(dframe, html_src = os.path.join(u"D:/Money/lilton_code/Market_
     text = text.replace("X1_NAME", "'%s'"%x1_name).replace("X2_NAME", "'%s'"%str(x2_name)).replace("X3_NAME", "'%s'"%str(x3_name)).replace("AXIS_DATA", axis_data)
     text = text.replace("X1_DATA", str(x1_data)).replace("X2_DATA", str(x2_data)).replace("X3_DATA", str(x3_data))
     return text
+
+
+# dframe 格式为： any_name(可修改，utf-8编码，共有轴), data_name1, data_name2, data_name3, ...， dframe值为对应的数字或者字符串
+# 生成横向条形图，条个数为data_name的个数
+def curve_option6(dframe, title='NO_TITLE', html_src=os.path.join(u"D:/Money/lilton_code/Market_Mode/rocketup/src", "")):
+    columns = dframe.columns
+    dframe.rename(columns={columns[0]:'COMMON_NAME'}, inplace=True)
+    common_data = list2str(dframe['COMMON_NAME'].values)
+    series_data_list = []
+    legend_name_list = []
+    for col_name in dframe.columns:
+        if col_name == 'COMMON_NAME':
+            continue
+        legend_name_list.append(col_name)
+        tmp_dict = {
+            'name':col_name,
+            'type':'bar',
+            'data':list2str([str(x) for x in list(dframe[col_name].values)])
+        }
+        series_data_list.append(tmp_dict)
+
+    str_series_data = list2str(series_data_list, delimiter='x').replace(r'\"', '').replace('"[', '[').replace(']"', ']')
+    str_legend_name = list2str(legend_name_list)
+
+    with open(os.path.join(html_src, "OPTION6.html"), 'rb') as fHandler:
+        text = fHandler.read()
+        try:
+            text = text.replace("TITLE", title).replace("LEGEND_NAME", str_legend_name)
+            text = text.replace("COMMON_Y_DATA", str(common_data)).replace("SERIES_DATA", str_series_data)
+        except:
+            print "Error"
+    return text
+
+# K线和横向的条状图
+# dframe4： index date, open, close, low, high, rate, hrate, lrate, volume
+# dframe6: any_name(可修改，utf-8编码，共有轴), data_name1, data_name2, data_name3, ...， dframe值为对应的数字或者字符串
+def curve_option4and6(dframe_list, title_list=['A', 'B'], html_src=os.path.join(u"D:/Money/lilton_code/Market_Mode/rocketup/src", "")):
+    [dframe4, dframe6] = dframe_list
+    [title4, title6] = title_list
+    # 先处理dframe4的
+    data4 = []
+    for idx in dframe4.index.values:
+        data4.append([dframe4.loc[idx, 'date'], dframe4.loc[idx, 'open'],
+                     dframe4.loc[idx, 'close'], dframe4.loc[idx, 'low'],
+                     dframe4.loc[idx, 'high'], dframe4.loc[idx, 'rate'],
+                     dframe4.loc[idx, 'hrate'], dframe4.loc[idx, 'lrate'],
+                      dframe4.loc[idx, 'volume']])
+
+    data4 = list2str(data4, delimiter="")
+
+
+    # 再处理dframe6的
+    columns = dframe6.columns
+    dframe6.rename(columns={columns[0]:'COMMON_NAME'}, inplace=True)
+    common_data = list2str(dframe6['COMMON_NAME'].values)
+    series_data_list = []
+    legend_name_list = []
+    for col_name in dframe6.columns:
+        if col_name == 'COMMON_NAME':
+            continue
+        legend_name_list.append(col_name)
+        tmp_dict = {
+            'name':col_name,
+            'type':'bar',
+            'data':list2str([str(x) for x in [round(x, 2) for x in dframe6[col_name].values]]),
+            'xAxisIndex':2,
+            'yAxisIndex':2,
+            'label':{"normal":{"show":"true","position": 'inside'}}
+        }
+        series_data_list.append(tmp_dict)
+
+    str_series_data = list2str(series_data_list, delimiter='x').replace(r'\"', '').replace('"[', '[').replace(']"', ']')
+    str_series_data = str_series_data.replace("[{", "{").replace("}]", "}")
+    str_legend_name = list2str(legend_name_list)
+
+
+
+    with open(os.path.join(html_src, "OPTION4and6.html"), 'rb') as fHandler:
+        # 替换掉OPTION4相关的
+        text = fHandler.read()
+        text = text.replace("STOCK_DATA", str(data4)).replace("STOCK_NAME", str(dframe4.iloc[0, :]['name']))
+        # 替换掉OPTION6相关的
+        text = text.replace("BAR_NAME", str(title6)).replace("LEGEND_NAME", str(str_legend_name))
+        text = text.replace("COMMON_Y_DATA", common_data.encode("utf-8")).replace("SERIES_DATA", str(str_series_data))
+    return text
+
+# dframe 格式为： any_name(可修改，utf-8编码), data_name1, data_name2, data_name3, ...
+# date格式为"%Y-%m-%d"
+# 据此生成正常情况下的柱状图
+def curve_option7(dframe, title='NO_TITLE', html_src=os.path.join(u"D:/Money/lilton_code/Market_Mode/rocketup/src", "")):
+    columns = dframe.columns
+    dframe.rename(columns={columns[0]:'COMMON_NAME'}, inplace=True)
+    common_data = list2str(dframe['COMMON_NAME'].values)
+    series_data_list = []
+    legend_name_list = []
+    for col_name in dframe.columns:
+        if col_name == 'COMMON_NAME':
+            continue
+        legend_name_list.append(col_name)
+        tmp_dict = {
+            'name':col_name,
+            'type':'bar',
+            'markLine' : {
+                'data' : [
+                    {'type' : 'average', 'name': '平均值'}
+                ]
+            },
+            'data':list2str([str(x) for x in list(dframe[col_name].values)])
+        }
+        series_data_list.append(tmp_dict)
+
+    str_series_data = list2str(series_data_list, delimiter='x').replace(r'\"', '').replace('"[', '[').replace(']"', ']')
+    str_legend_name = list2str(legend_name_list)
+
+    with open(os.path.join(html_src, "OPTION7.html"), 'rb') as fHandler:
+        text = fHandler.read()
+        try:
+            text = text.replace("TITLE", title).replace("LEGEND_NAME", str_legend_name)
+            text = text.replace("COMMON_X_DATA", common_data.encode("utf-8")).replace("SERIES_DATA", str_series_data.replace(",p,", ",'p',").replace(",p,", ",'p',").replace(",p,", ",'p',").replace(",p]", ",'p']"))
+        except:
+            print "Error"
+    return text
+
+
+
+
+
 
 
 # 将一个np.array的closePrice变成%
@@ -1180,7 +1474,7 @@ def get_concept_list(day, csvfile = ""):
 
 # dframes 为 [dframe]， 为各个option的输入数据
 # html_types 为 [html_type]， 为各个option对于的网页源码类型
-def get_html_curve(dframes, html_name, html_types = [1], title_list = [], save_dir = "./", html_src = os.path.join(u"D:/Money/lilton_code/Market_Mode/rocketup/src", "")):
+def get_html_curve(dframes, html_name, html_types = [1], title_list = [], data_name_list=['A','B'], width=1600, height=400, save_dir = "./", html_src = os.path.join(u"D:/Money/lilton_code/Market_Mode/rocketup/src", "")):
     # 读取html框架
     with open(os.path.join(html_src, "frame_work.html"), 'rb') as fHandler:
         frameWork = fHandler.read()
@@ -1198,12 +1492,26 @@ def get_html_curve(dframes, html_name, html_types = [1], title_list = [], save_d
             option = curve_option2(dframe)
         elif html_type == 3:    # 类型3， 直角坐标系下的热力图，显示每天对应概念的热度
             option = curve_option3(dframe)
+        elif html_type == 4:    # 类型4， K线图
+            option = curve_option4(dframe)
+        elif html_type == 5:    # 类型5， 散点图
+            option = curve_option5(dframe, data_name_list=data_name_list, title=title)
+        elif html_type == '4and5':
+            option = curve_option4and5(dframe, data_name_list=data_name_list, title=title)
+            # (dframe_list, data_name_list=['A', 'B'], title='concept_position', x_name='date', y_name='ratio%', size1='6', size2='6', html_src = os.path.join(u"D:/Money/lilton_code/Market_Mode/rocketup/src", "")):
+        elif html_type == 6:    # 类型4， K线图
+            option = curve_option6(dframe, title)
+        elif html_type == '4and6':
+            option = curve_option4and6(dframe, title)
+        elif html_type == 7:
+            option = curve_option7(dframe, title)
+
         if len(option) > 0:
             text_list.append(option)
 
     # 合并
     option, count =  set_frameWork_option(text_list)
-    front, inner = set_frameWork_charts(count)
+    front, inner = set_frameWork_charts(count,width=width, height=height)
     frameWork = frameWork.replace("BODY_HEADER", front)
     frameWork = frameWork.replace("OPTIONS", option)
     frameWork = frameWork.replace("MYCHARTS", inner)
@@ -1587,3 +1895,622 @@ def get_focused_concepts():
     for result in results:
         concepts.append(result['concept'])
     return concepts
+
+
+# 从东方财富网得到股票代码和名称
+#index_col CODE NAME
+def get_stoclist_dc():
+    url = "http://quote.eastmoney.com/stocklist.html"
+    stoc_df = pd.DataFrame()
+    rs_count = 2
+    while rs_count >0:
+        try:
+            r = requests.get(url)
+            if r.status_code != 200:
+                print "Error: get stock list from DC failed"
+                break
+            root = etree.HTML(r.content)
+            stock_infos = root.xpath(u'//div[@id="quotesearch"]/ul/li/a/text()')
+            dict_list = []
+            for stock_info in stock_infos:
+                stock_info_list = stock_info.split("(")
+                stock_name = stock_info_list[0]
+                stock_code = str(stock_info_list[1].replace(u")", ""))
+                if (len(stock_code)!= 6) or (stock_code[:2] not in ["00", "60", "30"]):
+                    continue
+                dict_list.append({"name":stock_name, "code":stock_code})
+            stoc_df = pd.read_json(json.dumps(dict_list))
+            stoc_df.reset_index(inplace=True)
+            del stoc_df['index']
+            stoc_df['code'] = stoc_df['code'].astype(np.str)
+            if len(stoc_df) > 1000:
+                break
+            rs_count -= 1
+        except:
+            rs_count -= 1
+    return stoc_df
+
+# 从tushare、东方财富网拿到股票list
+def get_stock_list_from_many_site():
+    mdir = 'D:\Money\lilton_code'
+    # 从tushare拿到股票list
+    zs = pd.DataFrame()
+    ts_count = 2
+    print "Get stock list from TUSHARE"
+    try:
+        # raise ValueError("EEE")
+        while ts_count > 0:
+            try:
+                zs = ts.get_stock_basics()
+                if len(zs) > 1000:
+                    zs.reset_index(inplace=True)
+                    zs = zs[['code', 'name']]
+                    break
+                print "Failed to get stock basics, len:%s" %len(zs)
+                ts_count -= 1
+                time.sleep(5)
+            except:
+                print "Failed to get stock basics"
+                ts_count -= 1
+                time.sleep(5)
+        # print ""
+        if ts_count <= 0:
+            raise Exception("Connect Error from Tushare")
+    except:
+        print "Failed to get stock list from TUSHARE"
+        zs = pd.read_csv(os.path.join(mdir, "stock_list.csv"), encoding='gbk', index_col=0)
+        # print zs.columns
+        zs.columns = [u'code', u'name']
+
+    stock_list=list(zs.code.values)
+    # print "Get stock list from DFCF"
+    # # 从东方财富网拿到股票list
+    # stocklist_dc = get_stoclist_dc()
+
+    print "Get latest stock from MONGO"
+    # 再加上最近一周更新的个股
+    global mongodb
+    today = datetime.datetime.today().strftime("%Y%m%d")
+    five_days_before = datetime.datetime.today() - datetime.timedelta(days=30)
+    five_days_before = five_days_before.strftime("%Y%m%d")
+    results = mongodb.stock.ZDT_by_date.find({"date":{"$gt":five_days_before, "$lt":today}})
+    for result in results:
+        if "Add_newStocks" in result.keys():
+            stock_list.extend(result['Add_newStocks'].keys())
+    stock_list = list(set(stock_list))
+
+    #
+    #
+    # if len(zs) < 1000:
+    #     zs = stocklist_dc
+    # else:
+    #     zs = zs.merge(stocklist_dc, left_on=['code', 'name'], right_on=['code', 'name'], how='outer')
+
+    zs.to_csv(os.path.join(mdir,'stock_list.csv'), encoding='gbk')
+
+    return stock_list
+
+
+# 抽取股金神话中的复盘数据
+def extract_gjsh_records(contents, tdate):
+    contents = etree.HTML(contents)
+    lines = contents.xpath('//div[@class="detail"]/p/text()')
+    if len(lines) == 0:
+        lines = contents.xpath('//div[@class="detail"]/text()')
+    match_str = r'\d{6}'
+    extract_infos = {"source":"GJSH", "date":tdate}
+    for eline in lines:
+        # print eline
+        try:
+            if re.search(match_str, eline):
+                # print "hit"
+                eline = eline.replace("\t", " ").replace(u"\xa0", u' ')
+                line_infos = eline.split(" ")
+                line_infos = [x for x in line_infos if len(x)>0]
+                stockid = line_infos[0]
+                stockname = line_infos[1]
+                for idx in range(2, len(line_infos)):
+                    if u':' in line_infos[idx]:
+                        # print 'hit2'
+                        zt_time = line_infos[idx]
+                        zt_reason = "_".join(line_infos[idx+1:])
+                        extract_infos[stockid] = {"name":stockname, "reason":zt_reason, "zttime":zt_time, "type":"ZT"}
+                        break
+        except:
+            pass
+    print "Get ZT INFO from GJSH: %s in total" %(len(extract_infos) - 1)
+    return extract_infos
+
+
+# 抽取股金神话中的复盘数据
+# 增加了大概念，即 xxxx概念：
+def extract_gjsh_records_big_concept(contents, tdate):
+    # 将+换成加
+    contents = contents.replace(r'+', u'加')
+    contents = etree.HTML(contents)
+    lines = contents.xpath('//div[@class="detail"]/p/text()')
+    if len(lines) == 0:
+        lines = contents.xpath('//div[@class="detail"]/text()')
+    match_str = r'\d{6}'
+    extract_infos = {"source":"GJSH_B", "date":tdate}
+    big_concept = ""
+    last_line = ""
+    last_valid_status = False
+    first_type_concept = False
+    for eline in lines:
+        eline = eline.strip()
+        try:
+            if re.search(match_str, eline):
+                eline = eline.replace("\t", " ").replace(u"\xa0", u' ')
+                line_infos = eline.split(" ")
+                line_infos = [x for x in line_infos if len(x)>0]
+                stockid = line_infos[0]
+                stockname = line_infos[1]
+                for idx in range(2, len(line_infos)):
+                    if u':' in line_infos[idx]:
+
+                        # 第二种含有big_concept的类型，即该行符合要求，如果上一行不符合要求，则上一行可能是（再排除掉点评之类的）
+                        # 条件一： 上一行不是300043 xxx 之类的
+                        # 条件二： 上一行不为空
+                        # 条件三： 不存在类型1的big concept
+                        if not last_valid_status and len(last_line) > 1 and not first_type_concept and u'点评' not in last_line and u'代码' not in last_line:
+                            big_concept = last_line.strip()
+                        zt_time = line_infos[idx]
+                        zt_reason = "_".join(line_infos[idx+1:])
+                        extract_infos[stockid] = {"name":stockname, "reason":zt_reason, "zttime":zt_time, "type":"ZT", "big_concept":big_concept}
+                        last_valid_status = True
+                        if len(eline) > 0:
+                            last_line = eline
+                        break
+            else:
+                last_valid_status = False
+                if len(eline.strip()) > 0:
+                    last_line = eline
+        except:
+            last_valid_status = False
+            if len(eline.strip()) > 0:
+                last_line = eline
+    print "Get ZT INFO from GJSH: %s in total" %(len(extract_infos) - 1)
+    return extract_infos
+
+
+# 指定访问股金神话页面，以及日期
+def directly_gjsh_page(url, tdate):
+    general_headers = {
+        "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Encoding":"gzip, deflate, sdch",
+        "Accept-Language":"zh-CN,zh;q=0.8",
+        "Connection":"keep-alive",
+        "Host":"www.xueqiu.com",
+        "Upgrade-Insecure-Requests":"1",
+        "User-Agent":"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36"
+        }
+
+    general_headers1 = {
+        "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Encoding":"gzip, deflate, br",
+        "Accept-Language":"zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3",
+        "Connection":"keep-alive",
+        "Host":"xueqiu.com",
+        "Upgrade-Insecure-Requests":"1",
+        "User-Agent":"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36"
+    }
+
+    main_page = "https://www.xueqiu.com"
+    s = requests.Session()
+    s.get(main_page, headers=general_headers)
+    global mongodb
+    next_url = url
+    status = False
+    # 开始获取信息
+    t_count = 5
+    while t_count > 0:
+        try:
+            r = s.get(next_url, headers = general_headers1)
+            if r.status_code != 200:
+                raise Exception("访问股金神话具体页面失败")
+            # record_infos = extract_gjsh_records(r.content.decode("utf-8"), tdate)
+            record_infos = extract_gjsh_records_big_concept(r.content.decode("utf-8"), tdate)
+            # 更新到mongo中
+            mongodb.stock.mirror_info.update({"source":"GJSH_B", "date":tdate}, {"$set":record_infos}, upsert=True, multi=False)
+            status = True
+            break
+        except Exception, e:
+            t_count -= 1
+            time.sleep(3)
+
+
+
+
+
+# 爬取股金神话的复盘信息
+# 存储到FP_INFO_DAILY
+# {"600036":{'name':名字, 'reason':原因, 'time':涨停时间},"":{}, xxxxxx,  "source":"GJSH"}
+def resee_info_gjsh(tdate=datetime.datetime.today().strftime("%Y%m%d")):
+    tdate = format_date(tdate, "%Y%m%d")
+    tyear = tdate[:4]
+    tmonth = str(int(tdate[4:6]))
+    tday = str(int(tdate[6:]))
+
+    general_headers = {
+        "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Encoding":"gzip, deflate, sdch",
+        "Accept-Language":"zh-CN,zh;q=0.8",
+        "Connection":"keep-alive",
+        "Host":"www.xueqiu.com",
+        "Upgrade-Insecure-Requests":"1",
+        "User-Agent":"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36"
+        }
+
+    general_headers1 = {
+        "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Encoding":"gzip, deflate, br",
+        "Accept-Language":"zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3",
+        "Connection":"keep-alive",
+        "Host":"xueqiu.com",
+        "Upgrade-Insecure-Requests":"1",
+        "User-Agent":"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36"
+    }
+
+    main_page = "https://www.xueqiu.com"
+    s = requests.Session()
+    s.get(main_page, headers=general_headers)
+
+
+    # 查看股金神话的页面
+    page1 = "https://xueqiu.com/statuses/search.json?q=%E6%B6%A8%E5%81%9C%E6%9D%BF%E5%A4%8D%E7%9B%98&page=1&uid=4172966218&sort=time"
+
+    r = s.get(page1, headers=general_headers1)
+    if r.status_code != 200:
+        print "Error: 访问股金神话主页失败!"
+
+    # content = r.content.decode("utf-8")
+    content = json.loads(r.content)
+    user_id = 0
+    file_id = 0
+    for infos in content['list']:
+        text = infos['title']
+        if tyear in text and tmonth in text and tday in text:
+            # print text
+            user_id = infos['user_id']
+            file_id = infos['id']
+            break
+    next_url = "https://xueqiu.com/%s/%s" % (user_id, file_id)
+
+    global mongodb
+    status = False
+    # 开始获取信息
+    t_count = 5
+    while t_count > 0:
+        try:
+            r = s.get(next_url, headers = general_headers1)
+            if r.status_code != 200:
+                raise Exception("访问股金神话具体页面失败")
+            record_infos = extract_gjsh_records(r.content.decode("utf-8"), tdate)
+            # 更新到mongo中
+            mongodb.stock.mirror_info.update({"source":"GJSH", "date":tdate}, {"$set":record_infos}, upsert=True)
+            status = True
+            break
+        except:
+            t_count -= 1
+            time.sleep(3)
+    return status
+
+
+# 爬取股金神话的复盘信息, 所有记录
+# 存储到FP_INFO_DAILY
+# {"600036":{'name':名字, 'reason':原因, 'time':涨停时间},"":{}, xxxxxx,  "source":"GJSH"}
+def resee_info_gjsh_all(date_list=[]):
+    general_headers = {
+        "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Encoding":"gzip, deflate, sdch",
+        "Accept-Language":"zh-CN,zh;q=0.8",
+        "Connection":"keep-alive",
+        "Host":"www.xueqiu.com",
+        "Upgrade-Insecure-Requests":"1",
+        "User-Agent":"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36"
+        }
+
+    general_headers1 = {
+        "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Encoding":"gzip, deflate, sdch, br",
+        "Accept-Language":"zh-CN,zh;q=0.8",
+        # "Cache-Control":"max-age=0",
+        "Connection":"keep-alive",
+        "Host":"xueqiu.com",
+        "Upgrade-Insecure-Requests":"1",
+        "Cookie":"remember=1; remember.sig=K4F3faYzmVuqC0iXIERCQf55g2Y; xq_a_token.sig=2n-f94Awog8FKA2ybxv4_HDcBu0; xq_r_token.sig=xrk1OoOf1b8zwqRy9nmPq68vIOI; xq_is_login.sig=J3LxgPVPUzbBg3Kee_PquUfih7Q; u.sig=Jgc8-j-5LK9Cu1KqQXwSKYg6Bdg; s=fp119z4o52; bid=c37ccb2fbbe1d07851272cff174d2d1a_j2vmf50p; webp=0; aliyungf_tc=AQAAAA3MtUgpdAQAXvKh01OyiY2Zo99Z; snbim_minify=true; xq_a_token=7306517b0e334b458892241394125c3a9733bc86; xqat=7306517b0e334b458892241394125c3a9733bc86; xq_r_token=b9ba5f2b2f6f62504431c69784442712253d4373; xq_token_expire=Fri%20Jun%2023%202017%2015%3A49%3A39%20GMT%2B0800%20(CST); xq_is_login=1; u=7362972133; __utmt=1; __utma=1.2102918026.1495184813.1496042939.1496047155.13; __utmb=1.1.10.1496047155; __utmc=1; __utmz=1.1495611549.7.2.utmcsr=baidu|utmccn=(organic)|utmcmd=organic; Hm_lvt_1db88642e346389874251b5a1eded6e3=1495523552,1495611549,1495713657,1496042934; Hm_lpvt_1db88642e346389874251b5a1eded6e3=1496047159",
+        "User-Agent":"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36"
+    }
+
+    main_page = "https://www.xueqiu.com"
+    s = requests.Session()
+    s.get(main_page, headers=general_headers)
+
+    total_count = 1
+    for tpage in range(1, 30):
+        try:
+            # 查看股金神话的页面
+            # page1 = "https://xueqiu.com/statuses/search.json?q=%E5%A4%8D%E7%9B%98&page=" + str(tpage) + "&uid=4172966218&sort=time&comment=0"
+            # 直接扫描原始页码
+            page1 = "https://xueqiu.com/v4/statuses/user_timeline.json?user_id=4172966218&type=&_=1495715494896&page=" + str(tpage)
+            print page1
+            r = s.get(page1, headers=general_headers1)
+            if r.status_code != 200:
+                print "Error: 访问股金神话主页失败!"
+
+            global mongodb
+            # content = r.content.decode("utf-8")
+            content = json.loads(r.content)
+            user_id = 0
+            file_id = 0
+            # for infos in content['list']:
+            for infos in content['statuses']:
+                text = infos['title'].replace(u'年', u'.').replace(u'月', u'.').replace(u'日', u'')
+                if u'复'not in text and u'盘' not in text:
+                    continue
+                date_pattern = r'(\d{4}).(\d+).(\d+)'
+                p = re.search(date_pattern, text)
+                if p is not None:
+                    tyear = p.group(1)
+                    tmonth = p.group(2)
+                    tday = p.group(3)
+                    tdate = int(tyear)*10000 + int(tmonth)*100 + int(tday)
+                    tdate = str(tdate)
+                    if len(date_list) == 0:
+                        pass
+                    else:
+                        if tdate not in date_list:
+                            continue
+                    print tdate
+                    # # 如果mongo中存在了，就不要了
+                    # if mongodb.stock.mirror_info.find({"date":tdate}).count() > 0:
+                    #     continue
+                    user_id = infos['user_id']
+                    file_id = infos['id']
+                    # print tdate
+                    next_url = "https://xueqiu.com/%s/%s" % (user_id, file_id)
+                    # 开始获取信息
+                    t_count = 5
+                    while t_count > 0:
+                        try:
+                            r = s.get(next_url, headers = general_headers1)
+                            if r.status_code != 200:
+                                raise Exception("访问股金神话具体页面失败")
+                            record_infos = extract_gjsh_records_big_concept(r.content.decode("utf-8"), tdate)
+                            # 更新到mongo中
+                            mongodb.stock.mirror_info.update({"source":"GJSH_B", "date":tdate}, {"$set":record_infos}, upsert=True)
+                            total_count += 1
+                            break
+                        except:
+                            t_count -= 1
+                            time.sleep(3)
+        except Exception, e:
+            print "Exception when handle page:%s" %tpage
+
+
+# 根据concept名字获取云财经的概念
+def get_ycj_stocks(concept):
+    global mongodb
+    stock_list = []
+    results = mongodb.stock.ycj_concept.find({"concept":concept})
+    if results.count() > 0:
+        stock_list.extend([x['stockid'] for x in results])
+    return stock_list
+
+# 根据concept名字获取云财经中对于的概念id
+def get_ycj_concept_id(concept):
+    global mongodb
+    concept_id = ""
+    result = mongodb.stock.ycj_concept.find_one({"concept":concept})
+    if result != None:
+        concept_id = result["id"]
+    return concept_id
+
+
+# 根据concept名字获取金融界的概念
+def get_jrj_stocks(concept):
+    global mongodb
+    stock_list = []
+    results = mongodb.stock.jrj_concept.find({"concept":concept})
+    if results.count() > 0:
+        stock_list.extend([x['stockid'] for x in results])
+    return stock_list
+
+
+# 得到概念的同义词列表
+# {概念1:[同义词1， 同义词2，本身词1]}, 概念2:[], ...}
+def get_close_concept(filepath = u'D:/Money/modeResee/彼战/盟军列表.txt'):
+    with open(filepath, 'rb') as fhandler:
+        x = fhandler.read()
+        x = x.decode('gbk')
+        concept_dict = eval(x)
+    return concept_dict
+
+
+# 将概念的相似值作为key，便于不用记住到底是雄安还是雄安新区为主key
+def get_value_close_concept(filepath = u'D:/Money/modeResee/彼战/盟军列表.txt'):
+    value_dict = {}
+    with open(filepath, 'rb') as fhandler:
+        x = fhandler.read()
+        x = x.decode('gbk')
+        concept_dict = eval(x)
+        for tkey in concept_dict.keys():
+            for tvalue in concept_dict[tkey]:
+                value_dict[tvalue] = tkey
+    return value_dict
+
+
+
+global close_concept_dict
+close_concept_dict = get_close_concept()
+
+global close_concept_value_dict
+close_concept_value_dict = get_value_close_concept()
+
+
+# 整理一段时间内，根据股金神话的复盘得到的概念信息
+# 输出为dataframe： 17(index)  20170602(date)  合康新能(name)  雄安新区(reason)  300048(ticker)    雄安(concept)
+def stock_concept_gjsh(start_date, end_date):
+    global mongodb
+    start_date = format_date(start_date, "%Y%m%d")
+    end_date = format_date(end_date, "%Y%m%d")
+    # 将每天的涨停信息转成信号存储的frame格式, key可以去reason（更细致），也可以取big_concept，最后统一都是'reason'
+    def get_concept_daily_frame(result_info, ckey='reason'):
+        daily_frame = pd.DataFrame()
+        tcount = 0
+        for dkey in result_info.keys():
+            if dkey in ['_id', 'date', 'source']:
+                continue
+            reason = result_info[dkey][ckey]
+            ticker = dkey
+            name = result_info[dkey]['name']
+            reason = reason.replace(u"+", u"_")
+            reason_list = reason.split("_")
+            # 将reason分开
+            for ec_reason in reason_list:
+                if ec_reason.isdigit():
+                    continue
+                daily_frame.loc[tcount, 'reason'] = ec_reason
+                daily_frame.loc[tcount, 'ticker'] = ticker
+                daily_frame.loc[tcount, 'name'] = name
+                tcount += 1
+        daily_frame['date'] = result_info['date']
+        return daily_frame
+
+    # 读入每天的涨停概念
+    frame_list = []
+    for result in mongodb.stock.mirror_info.find({"source":"GJSH_B", "date":{"$gte":start_date, "$lte":end_date}}):
+        daily_frame = get_concept_daily_frame(result, ckey='big_concept')
+        frame_list.append(daily_frame)
+    tframe = pd.concat(frame_list, axis=0)
+    tframe['reason'] = tframe['reason'].apply(lambda x: u'次新股' if x == u'次新' else x)
+
+    # 剔除掉某些概念（新股，公告、重组类等）
+    repl = re.compile(u'（.*）')
+    # 剔除掉新股
+    tframe = tframe[(tframe.reason!=u'新股') & (tframe.reason != u'新股上市')]
+    # 括号包括括号内的内容都去掉
+    tframe['reason'] = tframe['reason'].apply(lambda x: repl.sub("", x))
+    # 剔除掉公告、重组类
+    tframe = tframe[~((tframe.reason.str.contains(u'重组')) | (tframe.reason.str.contains(u'其它')) | (tframe.reason.str.contains(u'其他'))
+                     )]
+    # 剔除：以及后面的内容
+    repl2 = re.compile(u'：.*')
+    tframe['reason'] = tframe['reason'].apply(lambda x: repl2.sub("", x))
+
+    # 剔除 空格以及后面的内容
+    repl3 = re.compile(u' .*')
+    tframe['reason'] = tframe['reason'].apply(lambda x: repl3.sub("", x))
+
+    # 概念，概念股，概念个股字
+    tframe['reason'] = tframe['reason'].apply(lambda x: x.replace(u'概念股', u'').replace(u'个股', u'').replace(u'概念', u''))
+
+    # 读入概念同义词表
+    global close_concept_dict
+    # 将每一个概念都按照concept_list进行转换
+    tframe['concept'] = tframe['reason']
+    for concept_name in close_concept_dict.keys():
+        for cchar in close_concept_dict[concept_name]:
+            tframe['concept'] = tframe['concept'].apply(lambda x: concept_name if cchar in x else x)
+    tframe = tframe[[u'ticker', u'concept']]
+    return tframe
+
+# 从local的csv记录中，自己标注的group组和选股宝的列得到的股票列表
+# 返回的dataframe格式为： 720(index)  000916(stock)   并购重组(group) 并购重组(source_xgb)
+def stock_concept_csv(start_date, end_date):
+    root_dir = u'D:/Money/modeResee/复盘'
+    frame_list = []
+    for filename in os.listdir(root_dir):
+        if u'.' in filename or len(filename) != 8 or not filename.isdigit() or filename>end_date or filename<start_date:
+            continue
+        try:
+            tmp_frame = pd.read_csv(os.path.join(u"%s/%s" % (root_dir, filename), 'daydayup.csv'), encoding='gbk', index_col=0)
+            tmp_frame = tmp_frame[tmp_frame.type.isin(['ZT', 'HD'])]
+            tmp_frame['date'] = filename
+            frame_list.append(tmp_frame)
+            del tmp_frame['news']
+        except:
+            print "Error when read daydayup csv in stock_concept_gjsh for date:%s" %filename
+    csvframe = pd.concat(frame_list, axis=0)
+    csvframe = csvframe[[u'stock', u'source_xgb', u'group', u'date']]
+    csvframe.reset_index(inplace=True)
+    del csvframe['index']
+    csvframe.fillna('0', inplace=True)
+    for idx in csvframe.index.values:
+        csvframe.loc[idx, 'source_xgb'] = csvframe.loc[idx, 'source_xgb'].split("|")[0].strip()
+        csvframe.loc[idx, 'group'] = csvframe.loc[idx, 'group'].split("|")[0].strip()
+
+    csvframe['stock'] = csvframe['stock'].apply(lambda x: str(x).zfill(6))
+    return csvframe
+
+# 根据时间区间，filter出想要概念的股票
+class FindConceptStocks:
+    def __init__(self, start_date, end_date):
+        # 拿到时间区间内的所有的股票以及对应概念的frame
+        self.gjsh_frame = stock_concept_gjsh(start_date, end_date)       # index, ticker, concept
+        self.csv_frame = stock_concept_csv(start_date, end_date)         # index, stock, group, source_xgb
+        global close_concept_dict, close_concept_value_dict
+        self.close_concept_dict = close_concept_dict
+
+    def filter_by_concept(self, concept):
+        gjsh_frame = self.gjsh_frame.copy()
+        csv_frame = self.csv_frame.copy()
+
+        csv_frame['concept'] = csv_frame['group'] + csv_frame['source_xgb']
+        del csv_frame['group']
+        del csv_frame['source_xgb']
+        csv_frame.rename(columns={"stock":"ticker"}, inplace=True)
+
+        aframe = pd.concat([gjsh_frame, csv_frame], axis=0)
+        aframe.reset_index(inplace=True)
+        del aframe['index']
+
+        # # 过滤出关注的概念股票
+        # concept_keys = []
+        # if concept in self.close_concept_dict.keys():
+        #     concept_keys = self.close_concept_dict[concept]
+        # else:
+        #     concept_keys = [concept]
+
+        # 相近的名称
+        if concept in close_concept_dict.keys():
+            concept_keys = close_concept_dict[concept]
+        elif concept in close_concept_value_dict.keys():
+            real_concept = close_concept_value_dict[concept]
+            concept_keys = close_concept_dict[real_concept]
+        else:
+            concept_keys = [concept]
+
+
+        match_frame_list = []
+        # 再遍历concept_keys的值，匹配出对应的行
+        for concept_key in concept_keys:
+            match_frame_list.append(aframe[aframe.concept.str.contains(concept_key)])
+            aframe = aframe[~aframe.concept.str.contains(concept_key)]
+
+        match_frame = pd.concat(match_frame_list, axis=0)
+        del match_frame['concept']
+        match_frame['concept'] = concept
+        match_frame.drop_duplicates(subset=['ticker'])
+        return match_frame
+
+# 某只股票时期内的涨跌幅
+def time_range_accum_ratio(stock, start_date, end_date):
+    try:
+        start_date = get_lastN_date(start_date, 0)
+        end_date = get_lastN_date(end_date, 0)
+        s_close = get_mysqlData([stock], [start_date], db_table='vmkt_equd_adj').loc[0, 'CLOSE_PRICE']
+        e_close = get_mysqlData([stock], [end_date], db_table='vmkt_equd_adj').loc[0, 'CLOSE_PRICE']
+        ratio = 100*(e_close - s_close)/s_close
+        ratio = round(ratio, 2)
+    except:
+        ratio = 'p'
+    return ratio
+
+# 根据盟军.txt的key作为最顶级概念域名
+def get_top_dns_concept(conceptname):
+    if conceptname in close_concept_value_dict.keys():
+        real_concept = close_concept_value_dict[conceptname]
+        conceptname = real_concept
+    return conceptname

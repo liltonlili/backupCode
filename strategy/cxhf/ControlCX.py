@@ -189,6 +189,9 @@ def reControlCx(start_day = dt.datetime.today().strftime("%Y%m%d"), end_day = dt
 
             day = result['date']
             # 更新今日收盘后，一字涨停的股票涨停数
+            if day == '20170426':
+                print 'debug'
+                pass
             directTen, dummyDirectTen, backTen_acc, directOpen, highDirectOpen, backOpen, highBackOpen = continues_count(day, directTen, dummyDirectTen, backTen_acc, last_zt_stocks, last_new_stocks)
             print day
             print "will update"
@@ -209,5 +212,6 @@ def reControlCx(start_day = dt.datetime.today().strftime("%Y%m%d"), end_day = dt
     except:
         return False
 if __name__ == "__main__":
+    reControlCx()
     # 如果数据有问题，需要提前几天更新，单靠今天更新是不够的
-    reControlCx(start_day='20161212', end_day='20170308')
+    # reControlCx(start_day='20161212', end_day='20170426')

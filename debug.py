@@ -1,106 +1,86 @@
-#coding:utf-8
-import cv2
-import numpy as np
-import requests as rq
-import tushare as ts
-import time
-import datetime
-import common
+# coding:utf-8
 import pandas as pd
-import pymongo
+import numpy as np
+import hot_district
+import common
 import os
-import shutil
-import sys
-sys.path.append("./strategy")
-import intelligent_eye
-import tushare as ts
-import urllib2
-import urllib
-import os
-import copy
-import shutil
 
-print common.get_mongoDicts(dateStart="2016-10-20",dateEnd="2017-03-10").count()
-# shutil.move
-# today = "20161230"
-# mongodb = pymongo.MongoClient('localhost')
-# results = mongodb.stock.ZDT_by_date.find({"date":{"$gte":"20161010"}})
-# csv_dir = u'D:/Money/modeResee/复盘'
-# for result in results:
-#     day = result['date']
-#     csv_file = os.path.join(csv_dir, "%s/daydayup.csv" % day)
-#     dframe = pd.read_csv(csv_file, encoding='gbk')
-#     dframe.dropna(subset=['stock'], inplace=True)
-#     columns = copy.deepcopy(dframe.columns)
-#     # if u'type' not in columns:
-#     #     continue
-#     for idx in dframe.index.values:
-#         stockid = dframe.loc[idx, 'stock']
-#         stockid = common.regulize_stockid(stockid)
-#         status = ''
-#         change_rate, close_zt_status, close_dt_status, high_zt_status, low_dt_status = common.get_day_k_status(stockid, day)
-#         status_list = [close_zt_status, close_dt_status, high_zt_status]
-#         type_list = ['ZT', 'DT', 'HD']
-#         if u'type' in columns and dframe.loc[idx, 'type'] == dframe.loc[idx, 'type'] and len(dframe.loc[idx, 'type']) >0:
-#             continue
-#         if True in status_list:
-#             status = type_list[status_list.index(True)]
-#         else:
-#             print "not find match for %s, %s" % (stockid, day)
-#             continue
-#         dframe.loc[idx, 'type'] = status
-#         print "%s, %s,  readd type, %s" % (day, stockid, status)
-#     dframe.to_csv(csv_file, encoding='gbk')
+x = hot_district.ThemeDigger()
+x.running_day = "20170721"
+x.daily_html_summary()
+x.tree_html()
 
 
 
-# csv_dir = u'D:/Money/modeResee/复盘/网络复盘/凤凰/extract'
-# target_dir = u'D:/Money/modeResee/复盘'
-# current_dir_list = os.listdir(target_dir)
-# results = mongodb.stock.ZDT_by_date.find({"date":{"$gte":"20161010"}})
-# for result in results:
-#     date = result['date']
-#     date = common.format_date(date, "%Y%m%d")
-#     x = intelligent_eye.IntelliGentEye(day = date)
-#     x.scan()
 
-# 将凤凰的文件转到各个文件夹下面
-# for result in results:
-#     date = result['date']
-#     date = common.format_date(date, "%Y%m%d")
-#     scan_dir = os.path.join(target_dir, date)
-#     print date
-#     if date not in current_dir_list:
-#         print "will build folder %s" %date
-#         os.makedirs(scan_dir)     #创建目录
-#         shutil.copy(os.path.join(csv_dir, "%s.csv"%date), os.path.join(scan_dir, 'daydayup.csv'))
-#     elif 'daydayup.csv' not in os.listdir(scan_dir):        # 存在目录，但是没有daydayup.csv
-#         print 'will copy daydayup.csv'
-#         shutil.copy(os.path.join(csv_dir, "%s.csv"%date), os.path.join(scan_dir, 'daydayup.csv'))
-#     else:
-#         print "already exists dir, and daydayup.csv"
 
-# common.generate_html("20161221", "20161222")
-# 将AR概念的，好几天都画到一张图中，最后生成一个html
-# global mongodb
-# stockids, stocknames = common.get_stockids_from_concept(u'AR')
+# daily_frame = pd.read_csv(u'all_daily_frame.csv', encoding='gbk',dtype={"TICKER_SYMBOL":np.str}, index_col=0)
+# daily_frame.head()
 #
-# dates = ['20160711', '20160712', '20160713']
-# common.get_html_curve1_multi_date(stockids, dates, u'C:/Users/li.li/Desktop/test', 'AR2')
-# dframe_list = []
-# title_list = []
-# html_types = []
-# for date in dates:
-#     dframe = common.get_dataframe_option1(stockids, date)
-#     dframe_list.append(dframe)
-#     title_list.append(date)
-#     html_types.append(1)
 #
-# common.get_html_curve(dframe_list, 'AR', html_types=html_types, title_list=title_list, save_dir=u'C:/Users/li.li/Desktop/test')
+# tpath = u'D:/Money/modeResee/彼战'
+# concept_frame = pd.read_excel(os.path.join(tpath, u'战区.xlsx'), encoding='gbk', sheetname=u'战区位置')
+# concept_frame = concept_frame[concept_frame[u'开战状态'] == 1]
+# concepts = concept_frame[u'战区'].values
 #
-
-
-# print x
-
-
-
+#
+#
+# running_day = "20170706"
+# n_day_before = common.get_lastN_date(running_day, 80)
+# concept_frame_list = []
+# all_local_frame = common.FindConceptStocks(n_day_before, running_day)
+#
+# for concept in concepts:
+#     concept_stocks = []
+#     # 云财经中相关股票
+#     ycj_stocks = common.get_ycj_stocks(concept)
+#     # 金融界中相关股票
+#     jrj_stocks = common.get_ycj_stocks(concept)
+#     # 本地csv中相关股票
+#     csv_stocks = all_local_frame.filter_by_concept(concept)
+#     # 合并到一起
+#     concept_stocks.extend(ycj_stocks)
+#     concept_stocks.extend(jrj_stocks)
+#     concept_stocks.extend(csv_stocks.ticker.values)
+#
+#     concept_stocks = list(set(concept_stocks))
+#     tmp_concept_frame = pd.DataFrame({"stockid":concept_stocks})
+#     tmp_concept_frame['concept'] = concept
+#     concept_frame_list.append(tmp_concept_frame)
+# # index stockid, concept
+# concept_frame = pd.concat(concept_frame_list, axis=0)
+#
+# condition1_frame = hot_district.filter_stock_by_zt_condition(daily_frame, condition='ZT', zt_num=3)
+# condition1_frame.head()
+#
+# for concept in concepts:
+#     print concept
+#     concept_stock_list = list(concept_frame[concept_frame.concept==concept].stockid.values)
+#     # 概念对应的所有股票的日线数据
+#     concept_daily_frame = daily_frame[daily_frame.TICKER_SYMBOL.isin(concept_stock_list)]
+#     # 统计出其涨幅排行
+#     concept_rank_chg_frame = hot_district.add_rank_chg(concept_daily_frame, chg_days=[5, 25], sort_v=5)
+#     # 得到涨幅排行前三的股票
+#     stock_list = list(concept_rank_chg_frame.sort('rank', ascending=False).tail(3).TICKER_SYMBOL.values)
+#     # 得到连续N个涨停以上的股票
+#     stock_list.extend(condition1_frame[condition1_frame.TICKER_SYMBOL.isin(concept_stock_list)])
+#     stock_list = list(set(stock_list))
+#     # 一系列k线图
+#     k_line_frame_list = []
+#     for stock in stock_list:
+#         stock_frame = daily_frame[daily_frame.TICKER_SYMBOL == stock][[u'TRADE_DATE', 'OPEN_PRICE', 'CLOSE_PRICE', 'HIGHEST_PRICE', 'LOWEST_PRICE',
+#                                                                        'TURNOVER_VOL', 'TICKER_SYMBOL']]
+#         stock_frame.columns=['date', 'open', 'close', 'high', 'low', 'volume', 'code']
+#         # index row，date，open, close, high, low, volume, code
+#         stock_frame = stock_frame.sort('date', ascending='True')
+#         stock_frame.reset_index(inplace=True)
+#         del stock_frame['index']
+#         k_line_frame_list.append(stock_frame)
+#     break
+#
+# # 画出一系列的html
+# concept_rank_chg_frame = concept_rank_chg_frame[concept_rank_chg_frame.TICKER_SYMBOL.isin(stock_list)]
+# concept_rank_chg_frame = concept_rank_chg_frame.sort('rank', ascending=True)
+#
+# common.get_html_curve([concept_rank_chg_frame[[u'TICKER_SYMBOL', '5_ratio', '25_ratio']]], 'TEST_2_K_LINE', html_types=[6], title_list = ['TEST6'])
+# # common.get_html_curve(k_line_frame_list, 'TEST_MULTI_K_LINE', html_types=[4]*len(k_line_frame_list), title_list = ['TEST']*len(k_line_frame_list))
