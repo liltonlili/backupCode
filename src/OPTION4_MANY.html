@@ -1,8 +1,9 @@
-var data0 = splitData(STOCK_DATA);
-var concept_y_name = 'CONCEPT_y_NAME';
-var concept_data1_name = 'DATA1_NAME';
-var data0 = splitData(STOCK_DATA);
+var data0 = splitData(STOCK_DATA0);
+var concept_data0_name = 'CONCEPT0_NAME';
 
+var data1 = splitData(STOCK_DATA1)
+var concept_data1_name = 'CONCEPT1_NAME';
+var total_title = 'TITLE';
 
 function splitData(rawData) {
     var categoryData = [];
@@ -14,7 +15,7 @@ function splitData(rawData) {
     for (var i = 0; i < rawData.length; i++) {
         categoryData.push(rawData[i].splice(0, 1)[0]);
         values.push(rawData[i])
-        vols.push(rawData[i][4]);
+        vols.push(rawData[i][7]);
     }
     return {
         categoryData: categoryData,
@@ -64,15 +65,6 @@ option = {
 				handleStyle: {
 					color: '#23c2aa'
 				}
-			},{
-				left: 60,
-				bottom:90,
-				yAxisIndex: [2],
-				fillerColor: 'rgba(126, 224, 209, 0.2)',
-				borderColor: 'rgba(126, 224, 209, 0.75)',
-				handleStyle: {
-					color: '#23c2aa'
-				}
 			}
         ],
 		//change
@@ -91,9 +83,9 @@ option = {
 				formatter : function (params) {
 					params = params[0]
 					var date = [
-						'Close:' + params.data[6] + '<br/>',
-						'H:' + params.data[7] + '<br/>',
-						'L:' + params.data[8] + '<br/>',
+						'Close:' + params.data[5] + '<br/>',
+						'H:' + params.data[6] + '<br/>',
+						'L:' + params.data[7] + '<br/>',
 						//'ratio:' + params.data[3] + '<br/>'
 					].join('')
 					return date
@@ -126,7 +118,7 @@ option = {
         {
 			left: '10%',
 			top: '50%',
-			height: '50%'
+			height: '40%'
 		}, 
 		// K line vol chart
 		{
@@ -174,11 +166,20 @@ option = {
 			},
 			splitNumber: 20
 		},
+		// K line vol
+        {
+			gridIndex: 3,
+			type: 'category',
+			data: data1.categoryData,
+			axisLabel: {
+				show: false
+			},
+		},
     ],
     yAxis: [
 	    // K line main chart
 		{
-			gridIndex: 3, 
+			gridIndex: 0, 
 			scale: true,
 			splitArea: {
 				show: true
@@ -213,7 +214,7 @@ option = {
 		}, 
 		// K line vol
 		{
-			gridIndex: 4,
+			gridIndex: 3,
 			axisLine: {
 				onZero: false
 			},
@@ -230,7 +231,7 @@ option = {
 		},
     ],
 	legend : {
-		data : [concept_data1_name, concept_data2_name],
+		data : [concept_data0_name, concept_data1_name],
 		top: '55%'
 	},
     series: [

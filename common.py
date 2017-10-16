@@ -411,7 +411,7 @@ def get_last_date(date):
     last_date = format_date(last_date,"%Y-%m-%d")
     return last_date
 
-
+# 上一个交易日
 # date为['2016-03-27'],output为['2016-03-26']
 def get_lastN_date(date,n):
     calframe=pd.read_csv(os.path.join("D:\Money","cal.csv"))
@@ -917,7 +917,7 @@ def get_daily_frame(code, start_date, end_date, id_type = 1):
     if id_type == 1:
         code = "0"*(6-len(str(int(code))))+str(int(code))
         sql = "SELECT TICKER_SYMBOL, SEC_SHORT_NAME, TRADE_DATE, PRE_CLOSE_PRICE, OPEN_PRICE, HIGHEST_PRICE, LOWEST_PRICE, CLOSE_PRICE, \
-        DEAL_AMOUNT from vmkt_equd where TRADE_DATE >= '%s' and TRADE_DATE <='%s' and TICKER_SYMBOL = '%s'"%(start_date,end_date,code)
+        DEAL_AMOUNT from vmkt_equd_adj where TRADE_DATE >= '%s' and TRADE_DATE <='%s' and TICKER_SYMBOL = '%s'"%(start_date,end_date,code)
         sub = get_mysqlData_sqlquery(sql)
     elif id_type == 0:
         # idxcode = "000001"
@@ -1020,20 +1020,89 @@ def set_frameWork_option(options):
     toption = ";\n".join(toption) + ";"
     return toption, count
 
+
+# flag_list分别代表龙头，跟风，排除
+# 再加上excel中指定的众多类型
+def gen_checkbox_form(stock_code, flag_list):
+    [v1, v2, v3] = ['checked="checked"' if x else "" for x in flag_list]
+
+    cbase1 = '<form action="" method="get">'
+    checkbox_base = '''
+    <label><input id="Dragon_%s" type="checkbox" %s  />龙头 </label>
+    <label><input id="Wind_%s" type="checkbox" %s  />跟风 </label>
+    <label><input id="Remove_%s" type="checkbox" %s />排除 </label>
+    ''' % (stock_code, v1, stock_code, v2, stock_code, v3)
+
+    checkbox_append_list = []
+    # 读取excel中的内容
+    dframe = pd.read_excel(os.path.join(u'D:/Money/modeResee/彼战', u'战区.xlsx'), encoding='gbk', sheetname=u'类型')
+    for idx in dframe.index.values:
+        code_str = dframe.loc[idx, u'源码']
+        name_str = dframe.loc[idx, u'网页标识']
+        str_v = u'<label><input id="%s_%s" type="checkbox" />%s </label>' % (code_str, stock_code, name_str)
+        checkbox_append_list.append(str_v.encode("utf-8"))
+    checkbox_append = "\n".join(checkbox_append_list)
+    check_base2 = "</form>"
+    checkbox_base = cbase1 + checkbox_base + checkbox_append + check_base2
+    return checkbox_base
+
+
+
+
+
 # 根据option的个数，动态调整网页中的图表个数
-def set_frameWork_charts(count, width=1600, height=400):
+# gdate为生成html的日期，str类型，格式为 20170908
+def set_frameWork_charts(count, gdate, width=1600, height=400, chart_connect=0, plot_stock_list=[], html_name='AAA'):
     inner_base = '''
-    var myChart = ec.init(document.getElementById('chartdivNum'));
-    myChart.setOption(optionNum);
+    var myChartNum = ec.init(document.getElementById('chartdivNum'));
+    myChartNum.setOption(optionNum);
     '''
+
+    dragon_list = []
+    wind_list = []
+    # 各个板块的龙头
+    concept_dragon_list = get_concept_dragon_list(gdate)
+    if html_name in concept_dragon_list.keys():
+        if 'dragon' in concept_dragon_list[html_name].keys():
+            dragon_list = concept_dragon_list[html_name]['dragon']
+        if 'wind' in concept_dragon_list[html_name].keys():
+            wind_list = concept_dragon_list[html_name]['wind']
+
+
     front_base = '<div id="chartdivNum" style="width:%spx;height:%spx"></div>' % (width, height)
+
     inner = []
     front = []
     for i in range(1, count):
         inner.append(inner_base.replace("Num", str(i)))
         front.append(front_base.replace("Num", str(i)))
+        stock_code = str(plot_stock_list[i-1])
+        if len(stock_code) == 6:
+            if stock_code in dragon_list:
+                flag_list = [True, False, False]    # 龙头，跟风，排除
+            elif stock_code in wind_list:
+                flag_list = [False, True, False]
+            else:
+                flag_list = [False, False, False]
+            txt = gen_checkbox_form(stock_code, flag_list)
+            front.append("%s%s%s"%("\n", txt, "\n"))
+
     inner = "\n".join(inner)
     front = "\n".join(front)
+    # 增加记录按钮
+    button = u'\n<input type="button" value="记录" onClick="checkCheckBox();" />'.encode("utf-8")
+    front += button
+
+    # 所有的都要连接到一起
+    if chart_connect == 1:
+        str_pre = "echarts.connect(["
+        for i in range(1, count):
+            if i != count-1:
+                str_pre += "myChart%s," % i
+            else:
+                str_pre += "myChart%s" % i
+        str_pre += "]);"
+        inner += "\n%s" % str_pre
     return front, inner
 
 # LEGEND_REPLACE = ['legendA','legendB']
@@ -1096,7 +1165,6 @@ def get_dataframe_option3(detail_group, concepts, days, character):
     dframe.iloc[-2, -1] = days
     dframe.iloc[-3, -1] = character
     return dframe
-
 
 
 # 为option1准备dataframe, 如果是指数，则可以配置扩大涨跌幅
@@ -1423,7 +1491,7 @@ def curve_option7(dframe, title='NO_TITLE', html_src=os.path.join(u"D:/Money/lil
         text = fHandler.read()
         try:
             text = text.replace("TITLE", title).replace("LEGEND_NAME", str_legend_name)
-            text = text.replace("COMMON_X_DATA", common_data.encode("utf-8")).replace("SERIES_DATA", str_series_data.replace(",p,", ",'p',").replace(",p,", ",'p',").replace(",p,", ",'p',").replace(",p]", ",'p']"))
+            text = text.replace("COMMON_X_DATA", common_data.encode("utf-8")).replace("SERIES_DATA", str_series_data.replace(",p,", ",'p',").replace(",p,", ",'p',").replace(",p,", ",'p',").replace(",p]", ",'p']").replace("[p,", "['p',"))
         except:
             print "Error"
     return text
@@ -1471,14 +1539,42 @@ def get_concept_list(day, csvfile = ""):
             tdict[attr] = tmp_dict
     return tdict
 
+# return: {"银行":{"龙头":[], "跟风":[]}
+def get_concept_dragon_list(gdate):
+    global mongodb
+    # 获取最近的一个交易日
+    find_date = format_date(get_lastN_date(gdate, 0), "%Y%m%d")
+    # 获取上一个交易日
+    find_date1 = format_date(get_lastN_date(gdate, 1), "%Y%m%d")
+    # 从mongo中找对应日期的龙头、跟风记录（即前一天的龙头信息）
+    results = mongodb.concepts.dragon_pool.find({"date":{"$lte":find_date, "$gte":find_date1}}).sort("date",pymongo.DESCENDING)
+    if results.count() == 0:
+        return {}
+        # raise Exception("No record for date:%s in concepts.dragon_pool" % find_date)
+    else:
+        return results[0]
+
 
 # dframes 为 [dframe]， 为各个option的输入数据
 # html_types 为 [html_type]， 为各个option对于的网页源码类型
-def get_html_curve(dframes, html_name, html_types = [1], title_list = [], data_name_list=['A','B'], width=1600, height=400, save_dir = "./", html_src = os.path.join(u"D:/Money/lilton_code/Market_Mode/rocketup/src", "")):
+# html_name就是概念名字
+# plot_stock_list = ['600036', '300088']
+def get_html_curve(dframes, html_name, html_types = [1], title_list = [], data_name_list=['A','B'],
+                   width=1600, height=400, save_dir = "./", chart_connect=0,
+                   html_src=os.path.join(u"D:/Money/lilton_code/Market_Mode/rocketup/src", ""), plot_stock_list=[],
+                   generate_date=datetime.datetime.today().strftime("%Y%m%d")):
+
+
+    # 如果有plot_stock_list，则得到对应的概念
+    if len(plot_stock_list) == 0:
+        plot_stock_list = [0]*len(html_types)
+
     # 读取html框架
     with open(os.path.join(html_src, "frame_work.html"), 'rb') as fHandler:
         frameWork = fHandler.read()
-
+        # 替换掉框架中的日期和概念字段，目前用在tree-summary下面
+        frameWork = frameWork.replace(u'ConceptVar', u'%s' %html_name).replace(u'DateVar', u'%s' % generate_date)
+        frameWork = frameWork.encode("utf-8")
     text_list = []
     # 分别得到各个option类型的text
     for i in range(0, len(html_types)):
@@ -1498,7 +1594,6 @@ def get_html_curve(dframes, html_name, html_types = [1], title_list = [], data_n
             option = curve_option5(dframe, data_name_list=data_name_list, title=title)
         elif html_type == '4and5':
             option = curve_option4and5(dframe, data_name_list=data_name_list, title=title)
-            # (dframe_list, data_name_list=['A', 'B'], title='concept_position', x_name='date', y_name='ratio%', size1='6', size2='6', html_src = os.path.join(u"D:/Money/lilton_code/Market_Mode/rocketup/src", "")):
         elif html_type == 6:    # 类型4， K线图
             option = curve_option6(dframe, title)
         elif html_type == '4and6':
@@ -1509,9 +1604,12 @@ def get_html_curve(dframes, html_name, html_types = [1], title_list = [], data_n
         if len(option) > 0:
             text_list.append(option)
 
-    # 合并
-    option, count =  set_frameWork_option(text_list)
-    front, inner = set_frameWork_charts(count,width=width, height=height)
+    # 合并，修改成多图连动,回来弄
+    option, count = set_frameWork_option(text_list)
+
+    front, inner = set_frameWork_charts(count, generate_date, width=width, height=height, chart_connect=chart_connect,
+                                        plot_stock_list=plot_stock_list, html_name=html_name)
+
     frameWork = frameWork.replace("BODY_HEADER", front)
     frameWork = frameWork.replace("OPTIONS", option)
     frameWork = frameWork.replace("MYCHARTS", inner)
@@ -1541,8 +1639,6 @@ def get_html_curve1_multi_date(stock_list, date_list, save_dir, html_name):
         html_types.append(1)
 
     get_html_curve(dframe_list, html_name, html_types=html_types, title_list=title_list, save_dir=save_dir)
-
-
 
 
 # 判断一个股票在某天，是否最高点涨停过
@@ -2508,9 +2604,62 @@ def time_range_accum_ratio(stock, start_date, end_date):
         ratio = 'p'
     return ratio
 
+
 # 根据盟军.txt的key作为最顶级概念域名
 def get_top_dns_concept(conceptname):
     if conceptname in close_concept_value_dict.keys():
         real_concept = close_concept_value_dict[conceptname]
         conceptname = real_concept
     return conceptname
+
+
+# 看一只股票是否走平了
+def get_flat_status(stockid, see_date, window_size=3):
+    global mysqldb
+    see_date = format_date(see_date, '%Y%m%d')
+    before_day = get_lastN_date(see_date, 30)
+    window_date_list= getDate(before_day, see_date)[-3:]
+    # 拿到see_date最近window_size的k线数据
+    priceframe = get_mysqlData([stockid], window_date_list, db_table='vmkt_equd_adj')
+    # if len(priceframe) != 3:
+    #     raise Exception("price frame len <3, no flat status returned")
+    priceframe['chg'] = 100*(priceframe['CLOSE_PRICE'] - priceframe['PRE_CLOSE_PRICE'])/priceframe['PRE_CLOSE_PRICE']
+    priceframe['chg'] = priceframe['chg'].round(2)
+    priceframe['abs_chg'] = abs(priceframe['chg'])
+
+    # 规则1：每天close的幅度在2%
+    check1 = (len(priceframe[(priceframe.abs_chg > 2)]) == 0)
+    # 规则2：连续3天的累计涨幅在4%以下
+    cum_ratio = 100*(np.cumprod(1+priceframe['chg'].values/100)[-1]-1)
+    check2 = (cum_ratio<3 if cum_ratio>=0 else cum_ratio>-4)
+
+    return check1&check2
+
+
+# 跑回归测试，看准确率和召回率
+def regression_flat():
+    global mongodb
+    results = mongodb.pattern.trend.find()
+    if results.count() <=0 :
+        raise Exception("No regression sample for flat")
+    tcount = 0
+    dframe = pd.DataFrame()
+    for result in results:
+        stockid = result['ticker']
+        date = result['date']
+        status = (result['trend'] == 'flat')
+        dframe.loc[tcount , 'ticker'] = stockid
+        dframe.loc[tcount, 'date'] = date
+        dframe.loc[tcount, 'real_flat'] = status
+        dframe.loc[tcount, 'recong_flat'] = get_flat_status(stockid, date)
+        tcount += 1
+
+    real_pos = dframe[dframe.real_flat==True]
+    print "recall:%s" % str(round(float(1.0*len(real_pos[real_pos.recong_flat == True])/len(real_pos)), 3))
+    pred_pos = dframe[dframe.recong_flat == True]
+    print "precision:%s" % str(round(float(1.0*len(pred_pos[pred_pos.real_flat == True])/len(pred_pos)), 3))
+    return dframe
+
+#
+# def window_plat_field(stockid, see_date):
+#

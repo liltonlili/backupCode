@@ -72,7 +72,7 @@ class RealPrice():
                 else:
                     code = 'sz'+code
                 stock_lists.append(code)
-            self.stock_lists=stock_lists
+            self.stock_lists=list(set(stock_lists))
             self.groupID=range(len(stock_lists)/200+1)
         except Exception, err:
             print "Encount error when initial stock list, err:%s" % err

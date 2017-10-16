@@ -221,6 +221,6 @@ if __name__ == "__main__":
     print 'generate L1 csv finished, output dir:%s' %save_dir
 
     # 生成.bat文件用来更新L1
-    with open(os.path.join(save_dir, u"2回到零原点.bat"), 'wb') as fHandler:
+    with open(os.path.join(save_dir, u"part2.bat"), 'wb') as fHandler:
         fHandler.write(ur"@start cmd /k python D:\Money\lilton_code\Market_Mode\rocketup\strategy\manage_cache_L1.py")
     common.showinfos(u'请review L1.csv')

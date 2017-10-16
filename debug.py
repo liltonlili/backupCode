@@ -3,13 +3,19 @@ import pandas as pd
 import numpy as np
 import hot_district
 import common
-import os
+import dragon_catcher
 
-x = hot_district.ThemeDigger()
-x.running_day = "20170721"
-x.daily_html_summary()
-x.tree_html()
+x = dragon_catcher.DRAGON_POOL()
 
+start_date = "20170908"
+while 1:
+    if start_date >= "20170918":
+        break
+    next_date = common.get_lastN_date(start_date, -1)
+    next_date = common.format_date(next_date, "%Y%m%d")
+    x.copy_pool_dragon(start_date, next_date)
+    print "copy %s to %s" %(start_date, next_date)
+    start_date = next_date
 
 
 

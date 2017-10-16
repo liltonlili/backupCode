@@ -87,12 +87,14 @@ def add_rank_chg(dframe, chg_days=[5, 25], sort_v=5):
 def accum_multip(df):
     return np.prod(df)
 
-
+# 设定该程序为每天收盘之后跑一次
 class ThemeDigger:
     def __init__(self, running_day=datetime.datetime.today().strftime("%Y%m%d")):
         mongourl = "localhost"
         self.mongodb = pymongo.MongoClient(mongourl)
         self.path = u'D:/Money/modeResee/彼战'
+        # self.running_day必须是交易日
+        # self.running_day = common.format_date(common.get_lastN_date(running_day, 0), "%Y%m%d")
         self.running_day = running_day
         self.concepts = []
         self.detect_dict = {}   # 新增的抓取项
@@ -163,11 +165,15 @@ class ThemeDigger:
         self.range_ratio_dict = range_ratio_dict
 
         # 读取特殊关照股票
-        dframe = pd.read_excel(os.path.join(self.path, u'战区.xlsx'), encoding='gbk', sheetname=u'特殊')
+        dframe = pd.read_csv(os.path.join(self.path, u'增减排除.csv'), encoding='gbk')
         dframe.fillna(0, inplace=True)
 
         self.extra_stocks = [common.QueryStockMap(name=x)[1] for x in dframe[dframe.status != 'spy']['name'].values]
         rmv_frame = dframe[dframe.status == 'spy']
+
+        # rmv_frame 再加上程序自动生成的list, 有时间再弄
+        # rmv_list =
+
 
         # rmv_dict = {
         #     concept_name:[stockid1, stockid2, stockid3, ...]
@@ -377,6 +383,11 @@ class ThemeDigger:
             plot_frame_list = [[k_line_frame_list[0], concept_rank_chg_frame]]
             plot_frame_list.extend(k_line_frame_list[1:])
 
+            # 构造对应的stock_list，标识对应的股票代码
+            plot_stock_list = []
+            for kline_frame in k_line_frame_list:
+                plot_stock_list.append(kline_frame['code'].values[0])
+
             html_types=['4and6']
             html_types.extend([4]*len(k_line_frame_list[1:]))
 
@@ -401,12 +412,14 @@ class ThemeDigger:
                 range_ratio_frame['stock_name'] = range_ratio_frame['stock_name'].apply(lambda x: common.QueryStockMap(x)[0])
                 # 添加到画图中
                 plot_frame_list.append(range_ratio_frame)
+                plot_stock_list.append(0)
                 html_types.append(7)
                 title_list.append('ACCUM_RATIO')
 
             # 输出html
             common.get_html_curve(plot_frame_list, '%s' %(concept), html_types=html_types,
-                      title_list = title_list, save_dir=os.path.join(self.dump_dir, self.running_day))
+                      title_list = title_list, save_dir=os.path.join(self.dump_dir, self.running_day),
+                                  chart_connect=1, plot_stock_list=plot_stock_list, generate_date=self.running_day)
             logging.getLogger().info("plot html finished for %s, %s" %(concept, self.running_day))
         print "Finished for %s" %self.running_day
 
@@ -464,5 +477,7 @@ class ThemeDigger:
         logging.getLogger().info("Finish tree html")
 
 if __name__ == '__main__':
-    x = ThemeDigger(running_day="20170721")
+    x = ThemeDigger()
     x.plot_stocks_html()
+    x.daily_html_summary()
+    x.tree_html()

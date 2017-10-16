@@ -252,7 +252,7 @@ if __name__ == "__main__":
 
 
 
-    IDs = [ '24388'] #
+    IDs = [ '525661'] #
     names = {
         # "494469": u'令胡冲',
         # "206476": u'瑞鹤仙',
@@ -270,7 +270,11 @@ if __name__ == "__main__":
         "24388": u'asking',
         "591447": u'著名刺客',
         "410361": u'榜中榜',
-        "464623": u'乔帮主',
+        "166597": u'乔帮主',
+        "190857": u'封情葬爱',
+        "7219": u"克拉美书",
+        "138280": u"十万起家",
+        "525661": u'小段公子'
     }
     for ID in IDs:
         logdir = os.path.join(u"D:/Money/lilton_code/Market_Mode/learnModule/logs/%s"%ID,"")
@@ -308,6 +312,7 @@ if __name__ == "__main__":
         # for href in hrefs:
         #     href = "http://www.taoguba.com.cn/" + href
         #     get_detailed_content(href)
+        tpages = 1
         try:
             for page in range(tpages,0,-1):
                 logging.getLogger().info("page:%s" %page)

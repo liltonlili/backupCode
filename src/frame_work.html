@@ -15,6 +15,39 @@
     <!-- ECharts file link -->
     <script src="./conf/echarts.min.js" type="text/javascript"></script>
 	<script src="./conf/jquery-3.1.0.min.js" type="text/javascript"></script>
+	<script>
+		function fake_click(obj) {
+				var ev = document.createEvent("MouseEvents");
+				ev.initMouseEvent(
+					"click", true, false, window, 0, 0, 0, 0, 0
+					, false, false, false, false, 0, null
+				);
+				obj.dispatchEvent(ev);
+			}
+
+		function export_raw(name, data) {
+				var urlObject = window.URL || window.webkitURL || window;
+		 
+				var export_blob = new Blob([data]);
+		 
+				var save_link = document.createElementNS("http://www.w3.org/1999/xhtml", "a")
+				save_link.href = urlObject.createObjectURL(export_blob);
+				save_link.download = name;
+				fake_click(save_link);
+			}
+
+		function checkCheckBox() {
+			var allInputs = document.getElementsByTagName('input');
+			var str_log = [];
+			var log_str = '';
+			for(i=0;i<allInputs.length;i++){
+				str_log.push(allInputs[i].id + '_' + allInputs[i].checked)
+			}
+			log_str = str_log.join(';');
+			export_raw('CLASSFIER_DateVar_ConceptVar.html', log_str);
+			console.log(log_str);
+		}
+	</script>
     <script type="text/javascript">
 	window.onload = function() {
 		show_pic(echarts);
